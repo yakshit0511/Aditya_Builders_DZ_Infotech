@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiMenu, FiX, FiPhone, FiInstagram } from "react-icons/fi";
 import { useSiteSettings } from "../../context/SiteSettingsContext.jsx";
+import logoImg from "../../assets/logo.jpg";
 
 export default function Header() {
   const settings = useSiteSettings();
@@ -24,46 +25,15 @@ export default function Header() {
 
   return (
     <>
-      {/* Top bar with quick info */}
-      <div className="bg-[#E8871E] text-white py-2 px-4 hidden md:block border-b border-amber-500/20 text-xs select-none">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-6">
-            {settings.phoneNumbers && settings.phoneNumbers.length > 0 && (
-              <span className="flex items-center gap-1.5 font-medium">
-                📞 {settings.phoneNumbers[0]}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5 font-medium">
-              📍 Bhavnagar, Gujarat
-            </span>
-          </div>
-          <div>
-            <a
-              href={settings.instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:opacity-85 flex items-center gap-1 text-white font-medium transition-opacity"
-            >
-              <FiInstagram className="w-3.5 h-3.5" /> @adityabuilders_
-            </a>
-          </div>
-        </div>
-      </div>
 
       {/* Header element */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-amber-100/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center">
           {/* Logo / Brand Name */}
           <Link to="/" className="flex items-center gap-3 group">
-            {settings.logo?.url ? (
-              <div className="w-10 h-10 rounded-xl overflow-hidden border border-amber-100 group-hover:scale-105 transition-transform duration-200">
-                <img src={settings.logo.url} alt="Logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#F5A623] to-[#E8871E] flex items-center justify-center text-white font-extrabold text-lg shadow-sm group-hover:scale-105 transition-transform duration-200">
-                AB
-              </div>
-            )}
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-amber-100 group-hover:scale-105 transition-transform duration-200 shadow-sm bg-white">
+              <img src={logoImg} alt="Aditya Builders Logo" className="w-full h-full object-cover" />
+            </div>
             <div className="text-left">
               <span className="text-xl font-bold tracking-tight font-display text-[#2E2A26] block leading-none">
                 {settings.companyName}

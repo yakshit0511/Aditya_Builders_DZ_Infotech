@@ -18,6 +18,8 @@ export default function Button({
       "border border-[#F5A623]/30 text-[#E8871E] bg-white hover:bg-amber-50/40 hover:border-[#F5A623]",
     outline:
       "border border-gray-200 text-[#6B625A] bg-transparent hover:bg-gray-50 hover:text-[#2E2A26]",
+    outlineWhite:
+      "border border-white/60 text-white bg-transparent hover:bg-white/10 hover:border-white",
   };
 
   return (

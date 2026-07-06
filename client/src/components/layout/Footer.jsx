@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { FiInstagram, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { useSiteSettings } from "../../context/SiteSettingsContext.jsx";
+import logoImg from "../../assets/logo.jpg";
 
 export default function Footer() {
   const settings = useSiteSettings();
@@ -23,15 +24,9 @@ export default function Footer() {
         {/* Brand Column */}
         <div className="flex flex-col gap-6">
           <Link to="/" className="flex items-center gap-3">
-            {settings.logo?.url ? (
-              <div className="w-9 h-9 rounded-lg overflow-hidden border border-amber-800">
-                <img src={settings.logo.url} alt="Logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#F5A623] to-[#E8871E] flex items-center justify-center text-white font-extrabold text-sm">
-                AB
-              </div>
-            )}
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-amber-800 shadow-sm bg-white">
+              <img src={logoImg} alt="Aditya Builders Logo" className="w-full h-full object-cover" />
+            </div>
             <div>
               <span className="text-lg font-bold tracking-tight font-display text-white block leading-none">
                 {settings.companyName}

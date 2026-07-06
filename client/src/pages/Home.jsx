@@ -21,7 +21,7 @@ function useCountUp(target, duration = 1.5, trigger = true) {
     let start = 0;
     const end = parseInt(target, 10);
     if (isNaN(end) || end <= 0) return;
-    
+
     const totalSteps = 60;
     const stepTime = (duration * 1000) / totalSteps;
     let step = 0;
@@ -129,7 +129,7 @@ export default function Home() {
           className="absolute inset-0 w-full h-full object-cover object-center sm:object-right z-0 select-none pointer-events-none"
           loading="eager"
         />
-        
+
         {/* Dark warm gradient overlay to maximize text contrast */}
         <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#2E2A26] via-[#2E2A26]/80 to-transparent z-10" />
         <div className="absolute inset-0 bg-[#F5A623]/10 mix-blend-overlay z-10" />
@@ -152,22 +152,21 @@ export default function Home() {
               className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 font-display text-white leading-[1.1]"
             >
               Constructing Spaces Built On{" "}
-              <span className="text-[#F5A623] relative inline-block">
+              <span className="text-[#F5A623]">
                 Quality & Trust
-                <span className="absolute bottom-1.5 left-0 w-full h-2.5 bg-[#F5A623]/25 -z-10 rounded-full" />
               </span>
             </motion.h1>
 
             <motion.p
               variants={fadeInUp}
-              className="text-amber-400 text-lg font-bold font-display tracking-wide mb-6 uppercase"
+              className="text-[#F5A623] text-sm sm:text-base font-bold font-display tracking-wider mb-6 uppercase"
             >
               {settings.tagline}
             </motion.p>
 
             <motion.p
               variants={fadeInUp}
-              className="text-xs sm:text-sm text-gray-200 mb-8 leading-relaxed max-w-xl"
+              className="text-xs sm:text-sm text-gray-300/90 mb-8 leading-relaxed max-w-xl"
             >
               {settings.aboutUsShort}
             </motion.p>
@@ -175,11 +174,11 @@ export default function Home() {
             <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
               <Link to="/projects">
                 <Button variant="primary">
-                  Explore Projects <FiArrowRight />
+                  Explore Projects →
                 </Button>
               </Link>
               <Link to="/contact">
-                <Button variant="secondary">Contact Sales</Button>
+                <Button variant="outlineWhite">Contact Sales</Button>
               </Link>
             </motion.div>
           </motion.div>
@@ -195,19 +194,19 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-4 w-full h-full">
                 <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white">
                   <span className="text-4xl">🏗️</span>
-                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Premium Build</h4>
+                  <h4 className="font-extrabold text-[#F5A623] text-[10px] uppercase tracking-wider mt-3">PREMIUM BUILD</h4>
                 </div>
                 <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white translate-y-6">
                   <span className="text-4xl">🏢</span>
-                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Modern Layout</h4>
+                  <h4 className="font-extrabold text-[#F5A623] text-[10px] uppercase tracking-wider mt-3">MODERN LAYOUT</h4>
                 </div>
                 <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white -translate-y-6">
                   <span className="text-4xl">🏡</span>
-                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Vastu Compliant</h4>
+                  <h4 className="font-extrabold text-[#F5A623] text-[10px] uppercase tracking-wider mt-3">VASTU COMPLIANT</h4>
                 </div>
                 <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white">
                   <span className="text-4xl">🔑</span>
-                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Timely Delivery</h4>
+                  <h4 className="font-extrabold text-[#F5A623] text-[10px] uppercase tracking-wider mt-3">TIMELY DELIVERY</h4>
                 </div>
               </div>
             </div>
@@ -384,9 +383,8 @@ export default function Home() {
                 <button
                   key={idx}
                   onClick={() => setActiveReviewIndex(idx)}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    idx === activeReviewIndex ? "w-6 bg-[#E8871E]" : "bg-amber-200"
-                  }`}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === activeReviewIndex ? "w-6 bg-[#E8871E]" : "bg-amber-200"
+                    }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
