@@ -1,0 +1,7 @@
+# robots.txt for Aditya Builders website
+# Prevents indexation of the administrative CMS dashboard
+
+User-agent: *
+Disallow: /secure-panel-x9k2/
+Disallow: /secure-panel-x9k2
+Disallow: /api/

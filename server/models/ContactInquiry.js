@@ -93,6 +93,13 @@ const contactInquirySchema = new Schema(
       ],
       default: [],
     },
+
+    /** Internal notes jotted down by admin sales follow-up team */
+    internalNotes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { timestamps: true }
 );

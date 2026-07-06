@@ -58,18 +58,28 @@ export const getInquiry = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/admin/inquiries/:id/status  — update workflow status only
+// PATCH /api/admin/inquiries/:id/status  — update workflow status & internal notes
 // ─────────────────────────────────────────────────────────────────────────────
 export const updateInquiryStatus = [
   mongoId(),
   body("status")
+    .optional()
     .isIn(["New", "Contacted", "Closed"])
     .withMessage("Status must be New, Contacted, or Closed"),
+  body("internalNotes")
+    .optional()
+    .isString()
+    .withMessage("Internal notes must be a string"),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
+
+    const updateFields = {};
+    if (req.body.status !== undefined) updateFields.status = req.body.status;
+    if (req.body.internalNotes !== undefined) updateFields.internalNotes = req.body.internalNotes;
+
     const inquiry = await ContactInquiry.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      updateFields,
       { new: true, runValidators: true }
     );
     if (!inquiry) return res.status(404).json({ success: false, message: "Inquiry not found" });
