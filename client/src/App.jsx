@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./context/AuthContext.jsx";
@@ -21,10 +22,33 @@ import AdminPanel from "./admin/AdminPanel.jsx";
 
 const ADMIN_SLUG = import.meta.env.VITE_ADMIN_SLUG || "/secure-panel-x9k2";
 
+// Component to handle smooth scroll on hash links across routes
+function ScrollToHash() {
+  const { hash, pathname } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const element = document.getElementById(hash.slice(1));
+      if (element) {
+        // Wait briefly for content rendering
+        const timer = setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth" });
+        }, 120);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [hash, pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
+        <ScrollToHash />
         <AuthProvider>
           <SiteSettingsProvider>
             {/* Global toast notifications styling */}

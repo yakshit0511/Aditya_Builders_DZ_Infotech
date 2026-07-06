@@ -16,11 +16,11 @@ export default function Header() {
   }, [location.pathname]);
 
   const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "About Us", path: "/about" },
-    { name: "Projects", path: "/projects" },
-    { name: "Gallery", path: "/gallery" },
-    { name: "Contact Us", path: "/contact" },
+    { name: "Home", path: "/#home" },
+    { name: "About Us", path: "/#about" },
+    { name: "Projects", path: "/#projects" },
+    { name: "Gallery", path: "/#gallery" },
+    { name: "Contact Us", path: "/#contact" },
   ];
 
   return (
@@ -48,9 +48,9 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => {
               const isActive =
-                link.path === "/"
-                  ? location.pathname === "/"
-                  : location.pathname.startsWith(link.path);
+                link.path === "/#home"
+                  ? location.hash === "#home" || (location.hash === "" && location.pathname === "/")
+                  : location.hash === link.path.substring(1);
               return (
                 <Link
                   key={link.name}
@@ -101,9 +101,9 @@ export default function Header() {
               <div className="flex flex-col gap-4">
                 {navLinks.map((link) => {
                   const isActive =
-                    link.path === "/"
-                      ? location.pathname === "/"
-                      : location.pathname.startsWith(link.path);
+                    link.path === "/#home"
+                      ? location.hash === "#home" || (location.hash === "" && location.pathname === "/")
+                      : location.hash === link.path.substring(1);
                   return (
                     <Link
                       key={link.name}

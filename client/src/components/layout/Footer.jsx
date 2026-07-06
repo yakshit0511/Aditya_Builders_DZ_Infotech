@@ -10,11 +10,11 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "About Us", path: "/about" },
-    { name: "Projects", path: "/projects" },
-    { name: "Gallery", path: "/gallery" },
-    { name: "Contact Us", path: "/contact" },
+    { name: "Home", path: "/#home" },
+    { name: "About Us", path: "/#about" },
+    { name: "Projects", path: "/#projects" },
+    { name: "Gallery", path: "/#gallery" },
+    { name: "Contact Us", path: "/#contact" },
   ];
 
   return (
