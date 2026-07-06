@@ -9,6 +9,19 @@ import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
 import { configureCloudinary } from "./config/cloudinary.js";
 
+// ─── Admin Route Imports ───────────────────────────────────────────────────────
+import authRoutes        from "./routes/authRoutes.js";
+import adminProjectRoutes    from "./routes/adminProjectRoutes.js";
+import adminGalleryRoutes    from "./routes/adminGalleryRoutes.js";
+import adminTestimonialRoutes from "./routes/adminTestimonialRoutes.js";
+import adminInquiryRoutes    from "./routes/adminInquiryRoutes.js";
+import adminTeamRoutes       from "./routes/adminTeamRoutes.js";
+import adminSettingsRoutes   from "./routes/adminSettingsRoutes.js";
+import adminUserRoutes       from "./routes/adminUserRoutes.js";
+
+// ─── Error Middleware (must be imported BEFORE mounting, used AFTER routes) ────
+import { notFound, globalErrorHandler } from "./middleware/errorMiddleware.js";
+
 // ─── App Init ─────────────────────────────────────────────────────────────────
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,7 +39,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true, // allow cookies (for JWT in httpOnly cookie)
+    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -44,31 +57,30 @@ app.use(cookieParser());
 
 // ─── Global Rate Limiter (all routes) ─────────────────────────────────────────
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,                  // limit each IP to 200 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    status: 429,
-    error: "Too many requests. Please try again later.",
-  },
+  message: { success: false, message: "Too many requests. Please try again later." },
 });
 app.use(globalLimiter);
 
-// ─── Stricter Rate Limiter (prepared for auth & contact routes) ────────────────
-// Usage: import { strictLimiter } from "./server.js" and apply to sensitive routes
+// ─── Stricter Rate Limiter (exported for use on specific routes) ──────────────
+// Note: The login-specific 5-req/15-min limiter is applied in authRoutes.js.
+// This export remains available for any other sensitive routes added later.
 export const strictLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 requests per window per IP
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    status: 429,
-    error: "Too many attempts. Please wait before trying again.",
-  },
+  message: { success: false, message: "Too many attempts. Please wait before trying again." },
 });
 
-// ─── Health Check Route ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Public health check ───────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.status(200).json({
     status: "ok",
@@ -78,40 +90,45 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// ─── API Routes (to be mounted in future phases) ──────────────────────────────
+// ── Admin Auth ────────────────────────────────────────────────────────────────
+// Note on security layering:
+//   - These /api/admin/* routes are intentionally predictable — real security
+//     comes from JWT authentication, not route obscurity.
+//   - The CLIENT-SIDE admin panel URL (e.g. /secure-panel-x9k2) is a separate
+//     concern: it must remain unlinked from all public nav/footer/sitemaps.
+//     That URL is configured via VITE_ADMIN_SLUG in the client .env (Phase 1/6).
+app.use("/api/admin/auth",         authRoutes);
+
+// ── Admin Resource APIs (all protected by protect middleware in each router) ───
+app.use("/api/admin/projects",     adminProjectRoutes);
+app.use("/api/admin/gallery",      adminGalleryRoutes);
+app.use("/api/admin/testimonials", adminTestimonialRoutes);
+app.use("/api/admin/inquiries",    adminInquiryRoutes);
+app.use("/api/admin/team",         adminTeamRoutes);
+app.use("/api/admin/settings",     adminSettingsRoutes);
+app.use("/api/admin/admins",       adminUserRoutes);   // superadmin only
+
+// ── Public API routes (Phase 4) ───────────────────────────────────────────────
 // Example:
-// import projectRoutes from "./routes/projects.js";
-// app.use("/api/projects", projectRoutes);
+// import publicProjectRoutes from "./routes/publicProjectRoutes.js";
+// app.use("/api/projects", publicProjectRoutes);
 //
-// import contactRoutes from "./routes/contact.js";
+// import contactRoutes from "./routes/contactRoutes.js";
 // app.use("/api/contact", strictLimiter, contactRoutes);
-//
-// import authRoutes from "./routes/auth.js";
-// app.use("/api/auth", strictLimiter, authRoutes);
 
-// ─── 404 Handler ──────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ status: "error", message: "Route not found" });
-});
-
-// ─── Global Error Handler ──────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
-  console.error("❌ Unhandled Error:", err.stack || err.message);
-  res.status(err.status || 500).json({
-    status: "error",
-    message:
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : err.message,
-  });
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR HANDLING — Must be mounted LAST, after all routes
+// ─────────────────────────────────────────────────────────────────────────────
+app.use(notFound);
+app.use(globalErrorHandler);
 
 // ─── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(
     `🚀 Aditya Builders API running on port ${PORT} [${process.env.NODE_ENV || "development"}]`
   );
+  console.log(`   Admin API base: /api/admin/*`);
+  console.log(`   Health check:   http://localhost:${PORT}/api/health`);
 });
 
 export default app;
