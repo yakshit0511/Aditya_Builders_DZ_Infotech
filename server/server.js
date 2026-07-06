@@ -99,6 +99,9 @@ app.get("/api/health", (_req, res) => {
 //     That URL is configured via VITE_ADMIN_SLUG in the client .env (Phase 1/6).
 app.use("/api/admin/auth",         authRoutes);
 
+// ── Public API Route Import ───────────────────────────────────────────────────
+import publicRoutes from "./routes/publicRoutes.js";
+
 // ── Admin Resource APIs (all protected by protect middleware in each router) ───
 app.use("/api/admin/projects",     adminProjectRoutes);
 app.use("/api/admin/gallery",      adminGalleryRoutes);
@@ -109,12 +112,7 @@ app.use("/api/admin/settings",     adminSettingsRoutes);
 app.use("/api/admin/admins",       adminUserRoutes);   // superadmin only
 
 // ── Public API routes (Phase 4) ───────────────────────────────────────────────
-// Example:
-// import publicProjectRoutes from "./routes/publicProjectRoutes.js";
-// app.use("/api/projects", publicProjectRoutes);
-//
-// import contactRoutes from "./routes/contactRoutes.js";
-// app.use("/api/contact", strictLimiter, contactRoutes);
+app.use("/api", publicRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ERROR HANDLING — Must be mounted LAST, after all routes

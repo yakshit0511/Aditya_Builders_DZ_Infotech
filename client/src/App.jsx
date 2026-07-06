@@ -1,12 +1,14 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 // Public pages
-import Home     from "./pages/Home.jsx";
-import About    from "./pages/About.jsx";
-import Projects from "./pages/Projects.jsx";
-import Gallery  from "./pages/Gallery.jsx";
-import Contact  from "./pages/Contact.jsx";
+import Home          from "./pages/Home.jsx";
+import About         from "./pages/About.jsx";
+import Projects      from "./pages/Projects.jsx";
+import ProjectDetail from "./pages/ProjectDetail.jsx";
+import Gallery       from "./pages/Gallery.jsx";
+import Contact       from "./pages/Contact.jsx";
 
 // Admin panel (hidden — NOT linked from any public nav/footer/sitemap)
 // ⚠️  IMPORTANT: Before going live, change the slug below to something
@@ -21,8 +23,9 @@ const ADMIN_SLUG = import.meta.env.VITE_ADMIN_SLUG || "/secure-panel-x9k2";
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Global toast notifications */}
-      <Toaster
+      <AuthProvider>
+        {/* Global toast notifications */}
+        <Toaster
         position="top-right"
         toastOptions={{
           style: {
@@ -37,11 +40,12 @@ export default function App() {
 
       <Routes>
         {/* ── Public Routes ─────────────────────────────────────────────── */}
-        <Route path="/"         element={<Home />}     />
-        <Route path="/about"    element={<About />}    />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/gallery"  element={<Gallery />}  />
-        <Route path="/contact"  element={<Contact />}  />
+        <Route path="/"               element={<Home />}     />
+        <Route path="/about"          element={<About />}    />
+        <Route path="/projects"       element={<Projects />} />
+        <Route path="/projects/:slug" element={<ProjectDetail />} />
+        <Route path="/gallery"        element={<Gallery />}  />
+        <Route path="/contact"        element={<Contact />}  />
 
         {/* ── Hidden Admin Panel ─────────────────────────────────────────
             This route is intentionally NOT included in the public Navbar,
@@ -73,6 +77,7 @@ export default function App() {
           }
         />
       </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
