@@ -37,6 +37,7 @@ import heroBuildingImg from "../assets/hero-building.png";
 import { trackAnalyticsEvent } from "../utils/analytics.js";
 import { trackPixelEvent } from "../utils/pixel.js";
 import CallbackModal from "../components/ui/CallbackModal.jsx";
+import GalleryInquiryModal from "../components/ui/GalleryInquiryModal.jsx";
 
 // Custom hook to animate number counts smoothly
 function useCountUp(target, duration = 1.5, trigger = true) {
@@ -84,6 +85,7 @@ export default function Home() {
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [callbackOpen, setCallbackOpen] = useState(false);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
 
   // Projects filter states
   const [typeFilter, setTypeFilter] = useState("All");
@@ -808,7 +810,12 @@ export default function Home() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.3 }}
                       className="relative aspect-square rounded-2xl overflow-hidden group shadow-sm bg-white border border-amber-100/50 cursor-pointer"
-                      onClick={() => setLightboxUrl(img.image?.url)}
+                      onClick={() => setSelectedGalleryImage({
+                        url: img.image?.url,
+                        publicId: img.image?.publicId,
+                        title: img.title,
+                        category: img.category
+                      })}
                     >
                       <img
                         src={img.image?.url || "https://placehold.co/400x400/FAC354/FFFFFF?text=Aditya+Build"}
@@ -1060,6 +1067,12 @@ export default function Home() {
       <CallbackModal
         isOpen={callbackOpen}
         onClose={() => setCallbackOpen(false)}
+      />
+
+      <GalleryInquiryModal
+        isOpen={!!selectedGalleryImage}
+        onClose={() => setSelectedGalleryImage(null)}
+        image={selectedGalleryImage}
       />
     </>
   );

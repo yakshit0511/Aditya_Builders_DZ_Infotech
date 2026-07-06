@@ -50,6 +50,7 @@ export const inquiryValidation = [
   body("utmSource").optional().trim().escape(),
   body("utmMedium").optional().trim().escape(),
   body("utmCampaign").optional().trim().escape(),
+  body("referenceImage").optional().trim(),
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ export const createInquiry = [
       utmSource,
       utmMedium,
       utmCampaign,
+      referenceImage,
     } = req.body;
 
     // Set status workflow to 'New'
@@ -85,6 +87,26 @@ export const createInquiry = [
           publicId: file.filename || file.public_id || `upload-${Date.now()}`,
         });
       });
+    }
+
+    // Append reference image from gallery if selected
+    if (referenceImage) {
+      try {
+        const refImg = JSON.parse(referenceImage);
+        if (refImg.url) {
+          attachments.push({
+            url: refImg.url,
+            publicId: refImg.publicId || "gallery-ref",
+          });
+        }
+      } catch (e) {
+        if (typeof referenceImage === "string" && referenceImage.startsWith("http")) {
+          attachments.push({
+            url: referenceImage,
+            publicId: "gallery-ref",
+          });
+        }
+      }
     }
 
     const inquiry = await ContactInquiry.create({

@@ -7,6 +7,7 @@ import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
 import Loader from "../components/ui/Loader.jsx";
 import Button from "../components/ui/Button.jsx";
 import SectionHeading from "../components/ui/SectionHeading.jsx";
+import GalleryInquiryModal from "../components/ui/GalleryInquiryModal.jsx";
 
 export default function Gallery() {
   const settings = useSiteSettings();
@@ -14,8 +15,8 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  // Lightbox modal url
-  const [lightboxUrl, setLightboxUrl] = useState(null);
+  // Lightbox modal image details state
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // Pagination count limit
   const [displayCount, setDisplayCount] = useState(12);
@@ -78,33 +79,12 @@ export default function Gallery() {
         <meta name="twitter:image" content={window.location.origin + "/logo.jpg"} />
       </Helmet>
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {lightboxUrl && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setLightboxUrl(null)}
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out select-none"
-          >
-            <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <FiX className="w-6 h-6" />
-            </button>
-            <motion.img
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              src={lightboxUrl}
-              alt="Lightbox Fullscreen View"
-              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Split Layout Gallery Inquiry Modal */}
+      <GalleryInquiryModal
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        image={selectedImage}
+      />
 
       {/* Title Banner */}
       <section className="bg-gradient-to-br from-amber-50 to-orange-100/40 py-16 border-b border-amber-100 text-left select-none">
@@ -166,7 +146,12 @@ export default function Gallery() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.3 }}
                       className="relative aspect-square rounded-2xl overflow-hidden group shadow-sm bg-white border border-amber-100/50 cursor-pointer"
-                      onClick={() => setLightboxUrl(img.image?.url)}
+                      onClick={() => setSelectedImage({
+                        url: img.image?.url,
+                        publicId: img.image?.publicId,
+                        title: img.title,
+                        category: img.category
+                      })}
                     >
                       <img
                         src={img.image?.url || "https://placehold.co/400x400/FAC354/FFFFFF?text=Aditya+Build"}
