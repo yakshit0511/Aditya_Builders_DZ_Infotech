@@ -1,325 +1,256 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { FiPhone, FiMapPin, FiCalendar, FiDollarSign, FiGrid, FiArrowLeft } from "react-icons/fi";
-import toast from "react-hot-toast";
-import api from "../hooks/api.js";
-import Layout from "../components/Layout.jsx";
+import { Helmet } from "react-helmet-async";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiMapPin, FiPhone, FiInfo, FiTag, FiKey, FiAward, FiX } from "react-icons/fi";
+import { getProjectBySlug } from "../services/api.js";
+import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
+import Button from "../components/ui/Button.jsx";
+import Loader from "../components/ui/Loader.jsx";
+import Badge from "../components/ui/Badge.jsx";
 
 export default function ProjectDetail() {
+  const settings = useSiteSettings();
   const { slug } = useParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const [activePhotoUrl, setActivePhotoUrl] = useState(null);
+
+  // Lightbox index state
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   useEffect(() => {
-    async function fetchProject() {
+    async function loadProjectDetails() {
+      setLoading(true);
       try {
-        const { data } = await api.get(`/projects/${slug}`);
+        const { data } = await getProjectBySlug(slug);
         if (data.success && data.data) {
           setProject(data.data);
-          setFormData((prev) => ({
-            ...prev,
-            message: `Hello, I am interested in your project: "${data.data.title}". Please send me pricing details, floor plans, and site visit schedules.`,
-          }));
+          if (data.data.coverImage?.url) {
+            setActivePhotoUrl(data.data.coverImage.url);
+          }
         }
       } catch (err) {
-        console.error("Error loading project details", err);
+        console.error("Failed to load project details:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchProject();
+    loadProjectDetails();
   }, [slug]);
-
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      const payload = {
-        ...formData,
-        interestedProject: project._id,
-        source: "Project Enquiry",
-        subject: `Enquiry for ${project.title}`,
-      };
-
-      const { data } = await api.post("/inquiries", payload);
-
-      if (data.success) {
-        toast.success("Thank you! Your enquiry has been received.");
-        // clear inputs except message
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          message: `Hello, I am interested in your project: "${project.title}". Please send me pricing details, floor plans, and site visit schedules.`,
-        });
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message || "Submission failed. Please check inputs.";
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5A623]"></div>
-        </div>
-      </Layout>
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader size="md" />
+      </div>
     );
   }
 
   if (!project) {
     return (
-      <Layout>
-        <div className="section-container text-center py-20">
-          <h2 className="text-2xl font-bold font-display text-[#2E2A26] mb-4">Project Not Found</h2>
-          <p className="text-[#6B625A] mb-8">The project you are looking for does not exist or has been removed.</p>
-          <Link to="/projects" className="btn-primary">
-            Back to Projects
-          </Link>
-        </div>
-      </Layout>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-[#FFFBF5]">
+        <span className="text-5xl">🏘️</span>
+        <h2 className="text-2xl font-bold font-display text-[#2E2A26] mt-4">Project Not Found</h2>
+        <p className="text-xs text-[#6B625A] mt-1 max-w-sm">
+          We couldn't locate any active projects matching the address slug "{slug}". It may have been archived by the administrator.
+        </p>
+        <Link to="/projects" className="mt-6">
+          <Button variant="primary">Back to Projects</Button>
+        </Link>
+      </div>
     );
   }
 
-  return (
-    <Layout>
-      {/* Back button */}
-      <div className="bg-white border-b border-amber-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link to="/projects" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6B625A] hover:text-[#F5A623] transition-colors">
-            <FiArrowLeft /> Back to Projects
-          </Link>
-        </div>
-      </div>
+  // Combine cover image and gallery images for layout
+  const allImages = [];
+  if (project.coverImage?.url) allImages.push(project.coverImage.url);
+  if (project.gallery && Array.isArray(project.gallery)) {
+    project.gallery.forEach((g) => {
+      if (g.url) allImages.push(g.url);
+    });
+  }
 
-      {/* ─── Hero Overview Block ────────────────────────────────────────────── */}
-      <section className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Main Cover Image */}
-          <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-card border border-amber-100 bg-amber-50">
-            <img
-              src={project.coverImage?.url || "https://placehold.co/800x600/FAC354/FFFFFF?text=Project+Cover"}
-              alt={project.title}
-              className="w-full h-full object-cover"
+  return (
+    <>
+      <Helmet>
+        <title>{project.title} | Projects | {settings.companyName}</title>
+        <meta
+          name="description"
+          content={`Explore details, amenities, configuration, and floor designs for ${project.title} located at ${project.location} in Bhavnagar, Gujarat.`}
+        />
+      </Helmet>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxUrl(null)}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out select-none"
+          >
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={lightboxUrl}
+              alt="Lightbox View"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Details Body */}
+      <section className="py-12 bg-[#FFFBF5] text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Breadcrumbs navigation */}
+          <div className="flex gap-2 text-xs text-[#6B625A] mb-8 font-semibold select-none">
+            <Link to="/" className="hover:text-[#E8871E]">Home</Link>
+            <span>/</span>
+            <Link to="/projects" className="hover:text-[#E8871E]">Projects</Link>
+            <span>/</span>
+            <span className="text-[#2E2A26]">{project.title}</span>
           </div>
 
-          {/* Quick Specifications Info */}
-          <div className="text-left flex flex-col justify-center">
-            <span className="inline-block px-3 py-1.5 rounded-full text-xs font-bold bg-[#F5A623]/10 text-[#E8871E] border border-[#F5A623]/25 mb-4 uppercase tracking-wider w-max">
-              {project.status}
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-display text-[#2E2A26] mb-3">
-              {project.title}
-            </h1>
-            <p className="text-sm text-[#E8871E] font-bold font-display uppercase tracking-widest mb-6">
-              {project.type} • {project.configuration}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-amber-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623]">
-                  <FiDollarSign />
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#6B625A] uppercase block">Pricing</span>
-                  <span className="text-sm font-bold text-[#2E2A26]">{project.startingPrice || "Request Pricing"}</span>
-                </div>
-              </div>
-
-              {project.possessionDate && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623]">
-                    <FiCalendar />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#6B625A] uppercase block">Possession</span>
-                    <span className="text-sm font-bold text-[#2E2A26]">{project.possessionDate}</span>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            
+            {/* Left Column: Photo Showcase */}
+            <div className="lg:col-span-7 flex flex-col gap-4">
+              {activePhotoUrl && (
+                <div className="aspect-[4/3] rounded-3xl overflow-hidden border border-amber-100/50 shadow-sm bg-amber-50 relative group">
+                  <img src={activePhotoUrl} alt={project.title} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setLightboxUrl(activePhotoUrl)}
+                    className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold cursor-zoom-in"
+                  >
+                    Click to Enlarge 🔍
+                  </button>
                 </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623]">
-                  <FiMapPin />
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#6B625A] uppercase block">Locality</span>
-                  <span className="text-sm font-bold text-[#2E2A26]">{project.location}</span>
-                </div>
-              </div>
-
-              {project.reraNumber && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623]">
-                    <FiGrid />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#6B625A] uppercase block">RERA Number</span>
-                    <span className="text-sm font-bold text-[#2E2A26]">{project.reraNumber}</span>
-                  </div>
+              {/* Thumbnails list */}
+              {allImages.length > 1 && (
+                <div className="flex gap-3 overflow-x-auto pb-2 select-none">
+                  {allImages.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActivePhotoUrl(imgUrl)}
+                      className={`w-20 h-16 rounded-xl overflow-hidden border shrink-0 transition-all ${
+                        activePhotoUrl === imgUrl
+                          ? "border-[#E8871E] ring-2 ring-amber-100 scale-102"
+                          : "border-amber-100 hover:border-amber-200"
+                      }`}
+                    >
+                      <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ─── Detailed Description & Inquiry ─────────────────────────────────── */}
-      <section className="py-20 bg-[#FFFBF5] border-t border-amber-100/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Main Description details */}
-          <div className="lg:col-span-2 text-left">
-            <h2 className="text-2xl font-bold font-display text-[#2E2A26] mb-4">Project Overview</h2>
-            <p className="text-base text-[#6B625A] leading-relaxed mb-10 whitespace-pre-line">
-              {project.description}
-            </p>
-
-            {/* Amenities Grid */}
-            {project.amenities && project.amenities.length > 0 && (
-              <div className="mb-10">
-                <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-6">World-Class Amenities</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {project.amenities.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 px-4 py-3 rounded-lg bg-white border border-amber-100/30 text-[#6B625A] text-xs font-semibold shadow-sm">
-                      <span className="text-green-500 font-extrabold">✓</span> {item}
-                    </div>
-                  ))}
-                </div>
+            {/* Right Column: Spec sheet Details */}
+            <div className="lg:col-span-5 flex flex-col gap-6">
+              
+              {/* Header Title & Status */}
+              <div className="flex flex-col gap-2 items-start">
+                <Badge status={project.status} />
+                <h1 className="text-3xl sm:text-4xl font-extrabold font-display text-[#2E2A26]">
+                  {project.title}
+                </h1>
+                <span className="text-[#E8871E] font-bold font-display text-sm uppercase">
+                  {project.type} Property
+                </span>
               </div>
-            )}
 
-            {/* Project Gallery Images Grid */}
-            {project.gallery && project.gallery.length > 0 && (
-              <div>
-                <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-6">Gallery Showcase</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {project.gallery.map((img, i) => (
-                    <div key={i} className="aspect-video rounded-xl overflow-hidden shadow-sm border border-amber-100/30 bg-amber-50">
-                      <img src={img.url} alt={`Gallery ${i}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Inquiry Form Card sidebar */}
-          <div className="h-max">
-            <div className="bg-white border border-amber-100 rounded-xl p-8 shadow-card text-left">
-              <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-2">Request Details</h3>
-              <p className="text-xs text-[#6B625A] mb-6 leading-relaxed">
-                Submit this enquiry form and our sales representatives will contact you shortly with catalog brochures.
+              {/* Description */}
+              <p className="text-xs sm:text-sm text-[#6B625A] leading-relaxed">
+                {project.description}
               </p>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter name"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Enter email"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="phone" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    required
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Enter mobile number"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Custom message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={4}
-                    required
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm resize-none leading-relaxed"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full btn-primary justify-center text-sm py-3.5 mt-2"
-                >
-                  {submitting ? "Sending..." : "Submit Enquiry"}
-                </button>
-              </form>
-
-              {project.contactNumbers && project.contactNumbers.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-amber-50 text-center text-xs text-[#6B625A]">
-                  <p className="mb-2">Or call sales executive directly:</p>
-                  <div className="flex flex-col gap-1.5">
-                    {project.contactNumbers.map((num) => (
-                      <a key={num} href={`tel:${num.replace(/\s+/g, "")}`} className="font-bold text-[#E8871E] hover:underline flex items-center justify-center gap-1">
-                        <FiPhone /> {num}
-                      </a>
-                    ))}
+              {/* Specification table */}
+              <div className="bg-white border border-amber-100 rounded-2xl p-5 shadow-sm select-none">
+                <h3 className="font-bold text-[#2E2A26] font-display text-xs uppercase tracking-wider mb-4 border-b border-amber-50 pb-2">
+                  Specification Details
+                </h3>
+                <div className="flex flex-col gap-3.5 text-xs text-[#6B625A]">
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5 font-medium"><FiMapPin className="text-[#F5A623]" /> Location</span>
+                    <span className="font-bold text-[#2E2A26]">{project.location}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5 font-medium"><FiInfo className="text-[#F5A623]" /> Configuration</span>
+                    <span className="font-bold text-[#2E2A26]">{project.configuration}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5 font-medium"><FiTag className="text-[#F5A623]" /> Price Estimate</span>
+                    <span className="font-bold text-[#E8871E]">{project.startingPrice || "Request Quote"}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5 font-medium"><FiKey className="text-[#F5A623]" /> Possession Date</span>
+                    <span className="font-bold text-[#2E2A26]">{project.possessionDate || "TBA"}</span>
+                  </div>
+                  {project.reraNumber && (
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-1.5 font-medium"><FiAward className="text-[#F5A623]" /> RERA Registered</span>
+                      <span className="font-bold text-green-600 bg-green-50 border border-green-100 px-2.5 py-0.5 rounded text-[10px]">
+                        {project.reraNumber}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Sticky Enquiry Box CTA */}
+              <div className="bg-gradient-to-tr from-[#2E2A26] to-[#3D3732] text-white rounded-2xl p-5 border border-amber-900/10 shadow-sm flex flex-col gap-4 text-center items-center">
+                <div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-400">Interested in {project.title}?</h4>
+                  <p className="text-[10px] text-[#A3988F] mt-1 max-w-xs leading-relaxed">
+                    Get floor blueprints, pricing plans, and site visits scheduled with our Bhavnagar sales representatives.
+                  </p>
+                </div>
+                <Link to={`/contact?project=${project._id}`} className="w-full">
+                  <Button variant="primary" className="w-full">
+                    Enquire Now <FiPhone />
+                  </Button>
+                </Link>
+              </div>
+
             </div>
+
           </div>
+
+          {/* Amenities details list */}
+          {project.amenities && project.amenities.length > 0 && (
+            <div className="mt-16 border-t border-amber-100/50 pt-12">
+              <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-8">
+                Premium Amenities Provided
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 select-none">
+                {project.amenities.map((amenity, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-xl bg-white border border-amber-100 flex items-center gap-3 hover:shadow-xs transition-shadow shadow-sm"
+                  >
+                    <span className="text-lg">✦</span>
+                    <span className="text-xs font-bold text-[#6B625A]">{amenity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

@@ -1,74 +1,162 @@
-import { useState, useEffect } from "react";
-import { FiPhone, FiMail, FiMapPin, FiClock, FiSend } from "react-icons/fi";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import api from "../hooks/api.js";
-import Layout from "../components/Layout.jsx";
+import { FiMapPin, FiPhone, FiMail, FiInstagram, FiPlus, FiTrash2, FiClock } from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa";
+import { submitContactForm, getProjects } from "../services/api.js";
+import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
+import Button from "../components/ui/Button.jsx";
+import SectionHeading from "../components/ui/SectionHeading.jsx";
 
 export default function Contact() {
-  const [settings, setSettings] = useState({
-    address: "Plot no 3, Shivomnagar, Jewels Circle to RTO Road, Bhavnagar 364004, Gujarat",
-    phoneNumbers: ["+91 99748 58500"],
-    email: "info@adityabuilders.in",
-    whatsappNumber: "919974858500",
-    mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3705.5298835848245!2d72.1332616!3d21.7597143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395f507b9bbdf167%3A0xe54e3d3fa54e5251!2sRTO%20Office%20Bhavnagar!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin",
-  });
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  const settings = useSiteSettings();
+  const [searchParams] = useSearchParams();
+  const fileInputRef = useRef(null);
+
+  // Load projects list to display project name when query matches
+  const [projectsList, setProjectsList] = useState([]);
+  const [targetProjectName, setTargetProjectName] = useState(null);
+
+  // Form states
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [interestedProject, setInterestedProject] = useState("");
+
+  // Attachment states (stores array of file objects)
+  const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
 
   useEffect(() => {
-    async function fetchSettings() {
+    async function loadProjectsForDropdown() {
       try {
-        const { data } = await api.get("/settings");
-        if (data.success && data.data) {
-          setSettings(data.data);
+        const { data } = await getProjects();
+        if (data.success) {
+          const list = data.data.filter(p => p.isActive);
+          setProjectsList(list);
+
+          // Check if arriving from project detail query
+          const pId = searchParams.get("project");
+          if (pId) {
+            setInterestedProject(pId);
+            const match = list.find((p) => p._id === pId);
+            if (match) {
+              setTargetProjectName(match.title);
+            }
+          }
         }
-      } catch {
-        // Fallback to default state
-      } finally {
-        setLoadingSettings(false);
+      } catch (err) {
+        console.error("Failed to load projects list in contact:", err);
       }
     }
-    fetchSettings();
-  }, []);
+    loadProjectsForDropdown();
+  }, [searchParams]);
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  // Handle file selections
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
+
+    // Check file limits (max 5 files total)
+    if (attachments.length + files.length > 5) {
+      toast.error("You can attach up to 5 photo files maximum");
+      return;
+    }
+
+    const validAttachments = [];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+
+    files.forEach((file) => {
+      // Size check (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`"${file.name}" exceeds the 5MB size limit`);
+        return;
+      }
+
+      // Format check
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`"${file.name}" has an unsupported image format. Only JPG, PNG, WEBP are accepted.`);
+        return;
+      }
+
+      // Generate preview URL
+      validAttachments.push({
+        fileObj: file,
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+      });
+    });
+
+    setAttachments((prev) => [...prev, ...validAttachments]);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Remove attachment preview
+  const handleRemoveAttachment = (indexToRemove) => {
+    setAttachments((prev) => {
+      const match = prev[indexToRemove];
+      if (match?.previewUrl) {
+        URL.revokeObjectURL(match.previewUrl);
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
     });
   };
 
-  const handleSubmit = async (e) => {
+  // Clean preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      attachments.forEach((att) => {
+        if (att.previewUrl) URL.revokeObjectURL(att.previewUrl);
+      });
+    };
+  }, [attachments]);
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
+    if (!name || !email || !phone || !message) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     setSubmitting(true);
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("phone", phone);
+    formData.append("message", message);
+    if (subject) formData.append("subject", subject);
+    if (interestedProject) formData.append("interestedProject", interestedProject);
+
+    // Append attachments arrays (key matches multer router expects: 'photos')
+    attachments.forEach((att) => {
+      formData.append("photos", att.fileObj);
+    });
 
     try {
-      const payload = {
-        ...formData,
-        source: "Website Contact Form",
-      };
-
-      const { data } = await api.post("/inquiries", payload);
-
+      const { data } = await submitContactForm(formData);
       if (data.success) {
-        toast.success("Thank you! Your inquiry has been submitted successfully.");
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          subject: "",
-          message: "",
-        });
+        toast.success(data.message || "Thank you! We'll get back to you shortly.");
+        
+        // Reset state values
+        setName("");
+        setEmail("");
+        setPhone("");
+        setSubject("");
+        setMessage("");
+        setInterestedProject("");
+        setTargetProjectName(null);
+        setAttachments([]);
       }
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to submit. Please check inputs.";
+      const msg = err.response?.data?.message || "Failed to submit enquiry form. Please try again.";
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -76,194 +164,255 @@ export default function Contact() {
   };
 
   return (
-    <Layout>
-      {/* ─── Page Title Header ───────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-tr from-[#FFF6E8] to-[#FFFBF5] border-b border-amber-100 py-16 text-center">
-        <div className="section-container">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Get In Touch</span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2 mb-4">
-            Contact Us
+    <>
+      <Helmet>
+        <title>Contact Sales & Support | {settings.companyName}</title>
+        <meta
+          name="description"
+          content={`Get in touch with ${settings.companyName} at Bhavnagar, Gujarat. Schedule site visits, enquire about price lists, or upload reference photo templates.`}
+        />
+      </Helmet>
+
+      {/* Title Banner */}
+      <section className="bg-gradient-to-br from-amber-50 to-orange-100/40 py-16 border-b border-amber-100 text-left select-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#E8871E] mb-2 bg-[#F5A623]/10 px-3 py-1 rounded-full border border-[#F5A623]/25 w-max block">
+            Support
+          </span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2">
+            Get In Touch
           </h1>
-          <span className="title-underline mx-auto" />
-          <p className="text-[#6B625A] max-w-xl mx-auto text-sm leading-relaxed">
-            Have questions about our project layouts, pricing quotes, or booking details? Drop us a message or call our sales team directly.
-          </p>
         </div>
       </section>
 
-      {/* ─── Contact Form & Details Section ───────────────────────────────────── */}
-      <section className="py-20 bg-[#FFFBF5]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Details Column */}
-          <div className="text-left flex flex-col justify-between">
+      {/* Main Form/Details Columns */}
+      <section className="py-20 bg-[#FFFBF5] text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12">
+          
+          {/* Left Column: Contact details specifications */}
+          <div className="lg:col-span-5 flex flex-col gap-8 select-none">
             <div>
-              <h2 className="text-2xl font-bold font-display text-[#2E2A26] mb-6">Our Contact Details</h2>
-              <ul className="flex flex-col gap-6">
-                <li className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] shrink-0 shadow-sm border border-amber-100/50">
-                    <FiMapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[#2E2A26] text-sm mb-1">Corporate Address</h3>
-                    <p className="text-xs text-[#6B625A] leading-relaxed max-w-md">{settings.address}</p>
-                  </div>
-                </li>
+              <h3 className="text-2xl font-extrabold font-display text-[#2E2A26] mb-3">
+                Headquarters
+              </h3>
+              <p className="text-xs sm:text-sm text-[#6B625A] leading-relaxed">
+                Visit our office or call us directly during corporate working hours (9:00 AM — 7:00 PM, Sunday Closed) to review floor blueprints and contract catalogs.
+              </p>
+            </div>
 
-                <li className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] shrink-0 shadow-sm border border-amber-100/50">
-                    <FiPhone className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[#2E2A26] text-sm mb-1">Phone Numbers</h3>
-                    <div className="flex flex-col gap-1 text-xs text-[#6B625A] font-medium">
-                      {settings.phoneNumbers.map((num) => (
-                        <a key={num} href={`tel:${num.replace(/\s+/g, "")}`} className="hover:text-[#F5A623] transition-colors block">
-                          {num} (Sales Executive)
+            <div className="flex flex-col gap-5 text-xs sm:text-sm text-[#6B625A]">
+              <div className="flex gap-4 items-start bg-white p-5 rounded-2xl border border-amber-100/50 shadow-xs">
+                <FiMapPin className="text-[#F5A623] w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-extrabold text-[#2E2A26] mb-1">Office Address</h4>
+                  <p className="leading-relaxed">{settings.address}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 items-start bg-white p-5 rounded-2xl border border-amber-100/50 shadow-xs">
+                <FiPhone className="text-[#F5A623] w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-extrabold text-[#2E2A26] mb-1">Call Us</h4>
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    {settings.phoneNumbers &&
+                      settings.phoneNumbers.map((num) => (
+                        <a key={num} href={`tel:${num.replace(/\s+/g, "")}`} className="hover:text-[#E8871E] font-bold">
+                          {num}
                         </a>
                       ))}
-                    </div>
                   </div>
-                </li>
+                </div>
+              </div>
 
-                <li className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] shrink-0 shadow-sm border border-amber-100/50">
-                    <FiMail className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[#2E2A26] text-sm mb-1">Email Enquiries</h3>
-                    <a href={`mailto:${settings.email}`} className="text-xs text-[#6B625A] font-medium hover:text-[#F5A623] transition-colors">
-                      {settings.email}
-                    </a>
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] shrink-0 shadow-sm border border-amber-100/50">
-                    <FiClock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[#2E2A26] text-sm mb-1">Office Hours</h3>
-                    <p className="text-xs text-[#6B625A]">Monday - Saturday: 9:30 AM to 7:00 PM</p>
-                    <p className="text-[10px] text-[#6B625A]/70 mt-0.5">Sunday: Closed</p>
-                  </div>
-                </li>
-              </ul>
+              <div className="flex gap-4 items-start bg-white p-5 rounded-2xl border border-amber-100/50 shadow-xs">
+                <FiMail className="text-[#F5A623] w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-extrabold text-[#2E2A26] mb-1">Email Us</h4>
+                  <a href={`mailto:${settings.email}`} className="hover:text-[#E8871E] font-bold mt-1 block break-all">
+                    {settings.email}
+                  </a>
+                </div>
+              </div>
             </div>
 
-            {/* Google Maps embed iframe */}
-            <div className="mt-8 rounded-xl overflow-hidden shadow-card border border-amber-100/50 aspect-video bg-amber-50">
-              <iframe
-                title="Office Location Map"
-                src={settings.mapEmbedUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3705.5298835848245!2d72.1332616!3d21.7597143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395f507b9bbdf167%3A0xe54e3d3fa54e5251!2sRTO%20Office%20Bhavnagar!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"}
-                className="w-full h-full border-0 grayscale hover:grayscale-0 transition-all duration-300"
-                allowFullScreen=""
-                loading="lazy"
-              ></iframe>
-            </div>
-          </div>
-
-          {/* Form Column */}
-          <div>
-            <div className="bg-white border border-amber-100 rounded-xl p-8 sm:p-10 shadow-card text-left">
-              <h2 className="text-2xl font-bold font-display text-[#2E2A26] mb-2">Send Us a Message</h2>
-              <p className="text-xs text-[#6B625A] mb-8 leading-relaxed">
-                Fill out the form below, and our team will get back to you within 24 business hours.
-              </p>
-
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                <div>
-                  <label htmlFor="name" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="John Doe"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label htmlFor="email" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      required
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="john@example.com"
-                      className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      required
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+91 99748 58500"
-                      className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="subject" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    required
-                    value={formData.subject}
-                    onChange={handleInputChange}
-                    placeholder="How can we help you?"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={5}
-                    required
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    placeholder="Type your message details here..."
-                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm resize-none leading-relaxed"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full btn-primary justify-center text-sm py-3.5 mt-2 flex items-center gap-2"
+            {/* Social connection handles */}
+            <div className="flex gap-4 items-center bg-[#FFFBF5] rounded-2xl p-5 border border-amber-100/30">
+              <span className="text-xs font-bold text-[#6B625A] uppercase tracking-wider">Social Channels:</span>
+              <a
+                href={settings.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl bg-white border border-amber-100 flex items-center justify-center hover:bg-[#F5A623] hover:text-white transition-colors"
+                aria-label="Instagram Profile"
+              >
+                <FiInstagram className="w-5 h-5" />
+              </a>
+              {settings.whatsappNumber && (
+                <a
+                  href={`https://wa.me/${settings.whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-xl bg-white border border-amber-100 flex items-center justify-center hover:bg-green-500 hover:text-white transition-colors"
+                  aria-label="WhatsApp Connect"
                 >
-                  {submitting ? "Sending..." : "Send Message"} <FiSend />
-                </button>
-              </form>
+                  <FaWhatsapp className="w-5 h-5" />
+                </a>
+              )}
             </div>
           </div>
+
+          {/* Right Column: Submission Form */}
+          <div className="lg:col-span-7 bg-white border border-amber-100 rounded-3xl p-8 shadow-sm flex flex-col gap-6">
+            <h3 className="text-xl font-bold font-display text-[#2E2A26]">
+              Send Us a Message
+            </h3>
+
+            {targetProjectName && (
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex justify-between items-center text-xs">
+                <span className="font-bold text-[#E8871E]">Enquiring about: {targetProjectName}</span>
+                <button
+                  onClick={() => {
+                    setInterestedProject("");
+                    setTargetProjectName(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 font-bold"
+                  title="Clear Project Reference"
+                >
+                  Clear X
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Parthraj Parmar"
+                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs text-[#2E2A26]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. parth@gmail.com"
+                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs text-[#2E2A26]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. +91 99748 58500"
+                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs text-[#2E2A26]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Subject (Optional)</label>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. Pricing Query"
+                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs text-[#2E2A26]"
+                  />
+                </div>
+              </div>
+
+              {/* Projects dropdown list if not pre-locked */}
+              {!targetProjectName && projectsList.length > 0 && (
+                <div>
+                  <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Interested Project (Optional)</label>
+                  <select
+                    value={interestedProject}
+                    onChange={(e) => setInterestedProject(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs text-[#2E2A26]"
+                  >
+                    <option value="">Select Project</option>
+                    {projectsList.map((p) => (
+                      <option key={p._id} value={p._id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider mb-2">Message *</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Tell us about your villa requirements or site visit request details..."
+                  className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-xs resize-none text-[#2E2A26] leading-relaxed"
+                />
+              </div>
+
+              {/* Multi-Photo attachments upload panel */}
+              <div className="flex flex-col gap-2">
+                <label className="block text-[10px] font-bold text-[#6B625A] uppercase tracking-wider">Photo Attachments (Optional)</label>
+                
+                {/* File picker drop area styling */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-amber-100 hover:border-[#F5A623] rounded-2xl p-6 bg-[#FFFBF5]/25 flex flex-col items-center justify-center cursor-pointer transition-colors text-center select-none"
+                >
+                  <FiPlus className="w-6 h-6 text-[#E8871E] mb-2" />
+                  <span className="text-xs font-bold text-[#2E2A26]">Click to upload reference photos</span>
+                  <span className="text-[9px] text-[#6B625A]/60 mt-1">Accepts up to 5 JPG/PNG/WEBP images (Max 5MB each)</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* File preview thumbnails panel */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mt-3 select-none">
+                    {attachments.map((att, idx) => (
+                      <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-amber-100 shadow-sm bg-amber-50 group">
+                        <img src={att.previewUrl} alt={`Attachment ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(idx)}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                          title="Remove Photo"
+                        >
+                          <FiTrash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button type="submit" disabled={submitting} className="py-4 mt-2 justify-center w-full">
+                {submitting ? "Sending Inquiry..." : "Submit Inquiry"}
+              </Button>
+            </form>
+          </div>
+
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

@@ -1,138 +1,192 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "../hooks/api.js";
-import Layout from "../components/Layout.jsx";
+import { getProjects } from "../services/api.js";
+import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
+import Card from "../components/ui/Card.jsx";
+import Loader from "../components/ui/Loader.jsx";
+import SectionHeading from "../components/ui/SectionHeading.jsx";
+import Badge from "../components/ui/Badge.jsx";
 
 export default function Projects() {
+  const settings = useSiteSettings();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState("All");
+
+  // Filters state
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
-    async function fetchProjects() {
+    async function loadProjectsList() {
       try {
-        const { data } = await api.get("/projects");
-        if (data.success && data.data) {
-          setProjects(data.data);
+        const { data } = await getProjects();
+        if (data.success) {
+          // Filter to show active projects only
+          setProjects(data.data.filter(p => p.isActive));
         }
       } catch (err) {
-        console.error("Error loading projects list", err);
+        console.error("Failed to load projects list:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchProjects();
+    loadProjectsList();
   }, []);
 
-  const types = ["All", "Residential", "Commercial", "Residential + Commercial"];
-
+  // Filter projects logic client-side for smoother transition animations
   const filteredProjects = projects.filter((p) => {
-    if (filterType === "All") return true;
-    return p.type === filterType;
+    const matchesType = typeFilter === "All" || p.type === typeFilter;
+    const matchesStatus = statusFilter === "All" || p.status === statusFilter;
+    return matchesType && matchesStatus;
   });
 
+  const projectTypes = ["All", "Residential", "Commercial"];
+  const projectStatuses = ["All", "Ongoing", "Completed", "Upcoming"];
+
   return (
-    <Layout>
-      {/* ─── Page Title Header ───────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-tr from-[#FFF6E8] to-[#FFFBF5] border-b border-amber-100 py-16 text-center">
-        <div className="section-container">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Portfolio</span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2 mb-4">
-            Our Building Projects
+    <>
+      <Helmet>
+        <title>Residential & Commercial Projects | {settings.companyName}</title>
+        <meta
+          name="description"
+          content={`Browse residential and commercial layouts from ${settings.companyName} in Bhavnagar, Gujarat. Ongoing, Completed and Upcoming properties.`}
+        />
+      </Helmet>
+
+      {/* Title Banner */}
+      <section className="bg-gradient-to-br from-amber-50 to-orange-100/40 py-16 border-b border-amber-100 text-left select-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#E8871E] mb-2 bg-[#F5A623]/10 px-3 py-1 rounded-full border border-[#F5A623]/25 w-max block">
+            Portfolio
+          </span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2">
+            Residential & Commercial Landmarks
           </h1>
-          <span className="title-underline mx-auto" />
-          <p className="text-[#6B625A] max-w-xl mx-auto text-sm leading-relaxed">
-            From affordable apartments to signature commercial centers in Bhavnagar, browse our completed, ongoing, and upcoming developments.
-          </p>
         </div>
       </section>
 
-      {/* ─── Main Portfolio Filter Grid ──────────────────────────────────────── */}
-      <section className="py-20 bg-[#FFFBF5]">
+      {/* Main projects grid view */}
+      <section className="py-16 bg-[#FFFBF5] text-left">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Filters Bar */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {types.map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
-                  filterType === type
-                    ? "bg-[#F5A623] text-white shadow-md shadow-amber-500/10 scale-105"
-                    : "bg-white text-[#6B625A] border border-amber-100/50 hover:bg-amber-50/30"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+          
+          {/* Filters controls bar */}
+          <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-12 border-b border-amber-100/50 pb-8 select-none">
+            {/* Type filters */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[9px] font-bold text-[#6B625A] uppercase tracking-wider">Property Type</span>
+              <div className="flex flex-wrap gap-2">
+                {projectTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setTypeFilter(type)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      typeFilter === type
+                        ? "bg-[#E8871E] text-white border-transparent shadow-sm"
+                        : "bg-white text-[#6B625A] border-amber-100 hover:bg-amber-50/50"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status filters */}
+            <div className="flex flex-col gap-2 w-full md:w-auto">
+              <span className="text-[9px] font-bold text-[#6B625A] uppercase tracking-wider">Construction Status</span>
+              <div className="flex flex-wrap gap-2">
+                {projectStatuses.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      statusFilter === status
+                        ? "bg-[#E8871E] text-white border-transparent shadow-sm"
+                        : "bg-white text-[#6B625A] border-amber-100 hover:bg-amber-50/50"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {loading ? (
-            <div className="flex justify-center items-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5A623]"></div>
-            </div>
+            <Loader size="md" />
           ) : filteredProjects.length === 0 ? (
-            <div className="text-center py-16 text-[#6B625A]">
-              No projects found in this category.
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20 bg-white border border-dashed border-amber-200 rounded-3xl p-8"
+            >
+              <span className="text-4xl">🏢</span>
+              <h3 className="font-extrabold text-[#2E2A26] text-base mt-4">No matching properties found</h3>
+              <p className="text-xs text-[#6B625A] mt-1 max-w-sm mx-auto">
+                We couldn't find any projects matching your current filter selections. Try resetting the filters.
+              </p>
+              <button
+                onClick={() => {
+                  setTypeFilter("All");
+                  setStatusFilter("All");
+                }}
+                className="mt-5 text-xs font-bold text-[#E8871E] underline cursor-pointer hover:text-[#F5A623]"
+              >
+                Reset Filters
+              </button>
+            </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <AnimatePresence mode="popLayout">
-                {filteredProjects.map((project) => (
-                  <motion.article
+                {filteredProjects.map((p) => (
+                  <motion.div
                     layout
+                    key={p._id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
-                    key={project._id}
-                    className="card group flex flex-col h-full border border-amber-100/30"
                   >
-                    {/* Project Image */}
-                    <div className="relative overflow-hidden aspect-[4/3] bg-amber-50 shrink-0">
-                      <img
-                        src={project.coverImage?.url || "https://placehold.co/600x450/FAC354/FFFFFF?text=Project"}
-                        alt={project.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur shadow-sm px-3.5 py-1.5 rounded-full text-xs font-bold text-[#E8871E]">
-                        {project.status}
+                    <Card className="flex flex-col h-full overflow-hidden text-left relative">
+                      <div className="aspect-[4/3] rounded-xl overflow-hidden bg-amber-50 border border-amber-100/50 mb-5 relative">
+                        <img
+                          src={p.coverImage?.url || "https://placehold.co/600x450/F5A623/FFFFFF?text=Aditya+Project"}
+                          alt={p.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <Badge status={p.status} className="absolute top-3 left-3 shadow-sm" />
                       </div>
-                    </div>
-
-                    {/* Details Block */}
-                    <div className="p-6 flex flex-col flex-grow text-left">
-                      <span className="text-xs font-bold text-[#E8871E] uppercase tracking-wider mb-1">
-                        {project.type} • {project.configuration}
+                      <h3 className="text-lg font-bold font-display text-[#2E2A26] mb-1">{p.title}</h3>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#E8871E] mb-3 block">
+                        {p.type} • {p.configuration}
                       </span>
-                      <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-2 group-hover:text-[#F5A623] transition-colors">
-                        {project.title}
-                      </h3>
-                      <p className="text-xs text-[#6B625A] mb-6 line-clamp-3 leading-relaxed">
-                        {project.description}
+                      <p className="text-xs text-[#6B625A] leading-relaxed line-clamp-3 mb-5">
+                        {p.description}
                       </p>
+                      
+                      {/* Pricing strip */}
+                      <div className="mb-5 bg-[#FFFBF5] rounded-xl border border-amber-50/50 p-3 flex justify-between items-center text-xs">
+                        <span className="font-semibold text-[#6B625A]">Starting Price:</span>
+                        <span className="font-extrabold text-[#E8871E] font-display">{p.startingPrice || "Request Quote"}</span>
+                      </div>
 
-                      <div className="mt-auto pt-4 border-t border-amber-50/50 flex justify-between items-center">
-                        <div>
-                          <span className="text-[10px] text-[#6B625A] uppercase block">Starting Price</span>
-                          <span className="text-sm font-bold text-[#2E2A26]">{project.startingPrice || "Contact Us"}</span>
-                        </div>
-                        <Link
-                          to={`/projects/${project.slug}`}
-                          className="text-xs font-bold text-[#F5A623] hover:text-[#E8871E] flex items-center gap-1 transition-colors"
-                        >
-                          View Details
+                      <div className="mt-auto pt-4 border-t border-amber-50 flex justify-between items-center text-xs">
+                        <span className="font-semibold text-[#6B625A]">{p.location}</span>
+                        <Link to={`/projects/${p.slug}`} className="font-bold text-[#E8871E] hover:underline flex items-center gap-1">
+                          Details →
                         </Link>
                       </div>
-                    </div>
-                  </motion.article>
+                    </Card>
+                  </motion.div>
                 ))}
               </AnimatePresence>
             </motion.div>
           )}
+
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

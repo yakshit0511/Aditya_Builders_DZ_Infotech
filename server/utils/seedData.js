@@ -245,6 +245,7 @@ const siteSettingsData = {
   address:
     "Plot no 3, Shivomnagar, Jewels Circle to RTO Road, Bhavnagar 364004, Gujarat",
   phoneNumbers:  ["+91 99748 58500"],
+  email:         "parthrajsinhparmar4115@gmail.com",
   instagramUrl:  "https://instagram.com/adityabuilders_",
   whatsappNumber: "919974858500",
   mapLatitude:   21.75979,

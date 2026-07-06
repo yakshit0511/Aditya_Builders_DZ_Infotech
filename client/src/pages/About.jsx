@@ -1,200 +1,211 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
-import { FiCheckCircle, FiShield, FiHeart } from "react-icons/fi";
-import api from "../hooks/api.js";
-import Layout from "../components/Layout.jsx";
-
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 25 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
-  },
-};
+import { FiAward, FiUsers, FiClock, FiHeart } from "react-icons/fi";
+import { getTeam } from "../services/api.js";
+import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
+import Card from "../components/ui/Card.jsx";
+import Loader from "../components/ui/Loader.jsx";
+import SectionHeading from "../components/ui/SectionHeading.jsx";
 
 export default function About() {
-  const [settings, setSettings] = useState({
-    aboutUsFull: "Aditya Builders has been shaping the skyline of Bhavnagar, Gujarat for over 15 years. Founded on the twin pillars of Quality and Trust, we have proudly served more than 1,000 happy customers across residential and commercial projects. Our commitment to timely delivery, superior construction standards, and transparent dealings sets us apart in the real estate landscape of Saurashtra.",
-    yearsOfExperience: 15,
-    happyCustomers: 1000,
-  });
+  const settings = useSiteSettings();
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function loadAboutData() {
       try {
-        const [settingsRes, teamRes] = await Promise.all([
-          api.get("/settings"),
-          api.get("/team"),
-        ]);
-        if (settingsRes.data?.success) setSettings(settingsRes.data.data);
-        if (teamRes.data?.success) setTeam(teamRes.data.data);
+        const { data } = await getTeam();
+        if (data.success) {
+          // Filter to show active team members only
+          setTeam(data.data.filter(member => member.isActive));
+        }
       } catch (err) {
-        console.error("Error loading about page data", err);
+        console.error("Failed to load staff bios:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    loadAboutData();
   }, []);
 
   const values = [
     {
-      icon: <FiCheckCircle className="w-6 h-6" />,
       title: "Quality Construction",
-      desc: "We use high-grade building materials and adhere strictly to Bureau of Indian Standards (BIS) and local safety codes for structural durability.",
+      desc: "We use premium ISI-marked materials, high-grade steel, and standard concrete mixes to construct load-bearing structures that stand for generations.",
+      icon: <FiAward className="w-6 h-6 text-[#E8871E]" />,
     },
     {
-      icon: <FiShield className="w-6 h-6" />,
-      title: "Trust & Transparency",
-      desc: "Clean land titles, timely delivery guarantees, and no hidden charges. All projects are built in compliance with RERA regulations.",
+      title: "Timely Delivery",
+      desc: "Our formula Quality + Time = Aditya guarantees possession handovers strictly per agreed schedules, avoiding delays and financial cost overruns.",
+      icon: <FiClock className="w-6 h-6 text-[#E8871E]" />,
     },
     {
-      icon: <FiHeart className="w-6 h-6" />,
-      title: "Customer First",
-      desc: "From customizable BHK options during construction to proactive after-sales support, we place customer satisfaction at the heart of our builder decisions.",
+      title: "Vastu Compliance",
+      desc: "Every villa, apartment, and layout design is curated alongside traditional Vastu principles, ensuring positive energy and alignment.",
+      icon: <FiHeart className="w-6 h-6 text-[#E8871E]" />,
+    },
+    {
+      title: "Client Transparency",
+      desc: "We practice transparent dealings, maintaining detailed documentations, clear title checks, and straight forward contract pricing.",
+      icon: <FiUsers className="w-6 h-6 text-[#E8871E]" />,
     },
   ];
 
   return (
-    <Layout>
-      {/* ─── Page Title Header ───────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-tr from-[#FFF6E8] to-[#FFFBF5] border-b border-amber-100 py-16 text-center">
-        <div className="section-container">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Est. 2009</span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2 mb-4">
-            About Aditya Builders
+    <>
+      <Helmet>
+        <title>About Us | {settings.companyName}</title>
+        <meta
+          name="description"
+          content={`Learn about the journey and values of ${settings.companyName}. Based in Bhavnagar, Gujarat with ${settings.yearsOfExperience} years of construction excellence.`}
+        />
+      </Helmet>
+
+      {/* ─── Page Title Banner ─── */}
+      <section className="bg-gradient-to-br from-amber-50 to-orange-100/40 py-16 border-b border-amber-100 text-left select-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#E8871E] mb-2 bg-[#F5A623]/10 px-3 py-1 rounded-full border border-[#F5A623]/25 w-max block">
+            Aditya Builders
+          </span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-display text-[#2E2A26] mt-2">
+            Our Legacy & Story
           </h1>
-          <span className="title-underline mx-auto" />
         </div>
       </section>
 
-      {/* ─── Main About Story Section ───────────────────────────────────────── */}
-      <section className="py-20 bg-[#FFFBF5]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Story Text */}
-          <div className="text-left">
-            <h2 className="text-3xl font-extrabold font-display text-[#2E2A26] mb-6 leading-tight">
-              Crafting Superior Homes and Living Spaces in Bhavnagar
+      {/* ─── Corporate Story ─── */}
+      <section className="py-20 bg-white text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col gap-6"
+          >
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-[#2E2A26]">
+              Shaping Saurashtra's Real Estate Landscape
             </h2>
-            <p className="text-base text-[#6B625A] mb-6 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-[#6B625A] leading-relaxed whitespace-pre-line">
               {settings.aboutUsFull}
             </p>
-            <div className="grid grid-cols-2 gap-6 pt-6 border-t border-amber-100/50">
-              <div>
-                <span className="text-3xl font-extrabold text-[#F5A623] block">{settings.yearsOfExperience}+ Years</span>
-                <span className="text-xs font-semibold text-[#6B625A] uppercase tracking-wider mt-1 block">Experience</span>
-              </div>
-              <div>
-                <span className="text-3xl font-extrabold text-[#F5A623] block">{settings.happyCustomers}+</span>
-                <span className="text-xs font-semibold text-[#6B625A] uppercase tracking-wider mt-1 block">Happy Families</span>
-              </div>
-            </div>
-          </div>
+          </motion.div>
 
-          {/* Collateral Images */}
-          <div className="relative">
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-card border-4 border-white bg-amber-50">
-              <img
-                src="https://picsum.photos/seed/adityateam/800/600"
-                alt="Aditya Builders Office Site"
-                className="w-full h-full object-cover"
-              />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="bg-[#FFFBF5] border border-amber-100 rounded-3xl p-8 shadow-sm flex flex-col gap-8 select-none"
+          >
+            <h3 className="text-lg font-bold font-display text-[#2E2A26] border-b border-amber-100/50 pb-4">
+              Why Aditya Builders?
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="flex flex-col">
+                <span className="text-3xl font-extrabold text-[#E8871E] font-display">
+                  {settings.yearsOfExperience}+
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B625A] mt-1">
+                  Years of trust
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-extrabold text-[#E8871E] font-display">
+                  {settings.happyCustomers}+
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B625A] mt-1">
+                  Happy Homeowners
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-extrabold text-[#E8871E] font-display">
+                  {settings.projectsCompleted || 5}+
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B625A] mt-1">
+                  Delivered Layouts
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-extrabold text-[#E8871E] font-display">
+                  100%
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B625A] mt-1">
+                  RERA Compliance
+                </span>
+              </div>
             </div>
-            {/* Absolute badge */}
-            <div className="absolute -bottom-6 -left-6 bg-white border border-amber-100 p-6 rounded-xl shadow-card hidden sm:block">
-              <p className="text-[#E8871E] font-bold font-display text-lg">"Quality + Time = Aditya"</p>
-              <p className="text-xs text-[#6B625A] mt-0.5">Our Corporate Tagline</p>
-            </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ─── Core Values Section ─────────────────────────────────────────────── */}
-      <section className="py-20 bg-white border-y border-amber-100/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Principles</span>
-            <h2 className="section-title text-[#2E2A26] mt-2">Our Core Values</h2>
-            <span className="title-underline mx-auto" />
-          </div>
+      {/* ─── Company Values ─── */}
+      <section className="py-20 bg-[#FFFBF5] border-y border-amber-150/40 text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SectionHeading
+            title="Principles We Standardize"
+            subtitle="Core Values"
+            align="center"
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {values.map((v, i) => (
-              <div key={i} className="p-8 rounded-xl bg-[#FFFBF5] border border-amber-100/30 text-left shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] mb-6 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {values.map((v, index) => (
+              <Card key={index} className="flex flex-col gap-4 text-left h-full">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100/50">
                   {v.icon}
                 </div>
-                <h3 className="text-lg font-bold font-display text-[#2E2A26] mb-3">{v.title}</h3>
-                <p className="text-sm text-[#6B625A] leading-relaxed">{v.desc}</p>
-              </div>
+                <h4 className="font-bold text-[#2E2A26] font-display text-sm">{v.title}</h4>
+                <p className="text-xs text-[#6B625A] leading-relaxed">{v.desc}</p>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Meet the Team Section ───────────────────────────────────────────── */}
-      <section className="py-20 bg-[#FFFBF5]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Leadership</span>
-            <h2 className="section-title text-[#2E2A26] mt-2">Meet the Team</h2>
-            <span className="title-underline mx-auto" />
-            <p className="text-[#6B625A]">
-              The experienced leaders and site specialists dedicated to realizing your construction plans with excellence.
-            </p>
-          </div>
+      {/* ─── Team Bios Directory ─── */}
+      <section className="py-20 bg-white text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SectionHeading
+            title="Meet Our Board & Engineering Leads"
+            subtitle="Management Team"
+            align="center"
+          />
 
           {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F5A623]"></div>
-            </div>
+            <Loader size="md" />
           ) : team.length === 0 ? (
-            <div className="text-center text-[#6B625A]">No team members listed yet.</div>
+            <p className="text-sm text-[#6B625A] text-center">Management directories are being updated.</p>
           ) : (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-center"
-            >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:max-w-4xl md:mx-auto">
               {team.map((member) => (
                 <motion.div
                   key={member._id}
-                  variants={fadeInUp}
-                  className="card flex flex-col items-center p-6 text-center border border-amber-100/20"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5 }}
+                  className="bg-white border border-amber-100 rounded-3xl p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow duration-300"
                 >
-                  {/* Photo */}
-                  <div className="w-32 h-32 rounded-full overflow-hidden mb-6 border-4 border-amber-100/50 bg-amber-50">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-amber-50 mb-5 border-2 border-[#F5A623]/25 shadow-sm">
                     <img
-                      src={member.photo?.url || "https://placehold.co/150/FAC354/FFFFFF?text=Staff"}
+                      src={member.photo?.url || "https://placehold.co/100/FAC354/FFFFFF?text=Staff"}
                       alt={member.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="text-lg font-bold font-display text-[#2E2A26]">{member.name}</h3>
-                  <span className="text-xs font-semibold text-[#E8871E] uppercase tracking-wider mt-1 mb-4 block">
+                  <h3 className="font-bold text-sm text-[#2E2A26]">{member.name}</h3>
+                  <span className="text-[10px] font-bold text-[#E8871E] uppercase mt-1 mb-3 block">
                     {member.designation}
                   </span>
-                  <p className="text-xs text-[#6B625A] leading-relaxed line-clamp-3">
-                    {member.bio}
-                  </p>
+                  <p className="text-xs text-[#6B625A] leading-relaxed">{member.bio}</p>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           )}
         </div>
       </section>
-    </Layout>
+    </>
   );
 }

@@ -1,345 +1,446 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FiArrowRight, FiCheckCircle, FiAward, FiUsers } from "react-icons/fi";
-import api from "../hooks/api.js";
-import Layout from "../components/Layout.jsx";
+import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet-async";
+import { FiArrowRight, FiCheckCircle, FiUsers, FiLayers, FiStar } from "react-icons/fi";
+import { getProjects, getTestimonials, getGallery } from "../services/api.js";
+import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
+import Button from "../components/ui/Button.jsx";
+import Card from "../components/ui/Card.jsx";
+import Loader from "../components/ui/Loader.jsx";
+import SectionHeading from "../components/ui/SectionHeading.jsx";
+import Badge from "../components/ui/Badge.jsx";
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.215, 0.61, 0.355, 1] },
-  },
-};
-
-export default function Home() {
-  const [settings, setSettings] = useState({
-    tagline: "You Dream it, We Build it. Quality + Time = Aditya",
-    aboutUsShort: "Aditya Builders is a trusted construction and real estate company based in Bhavnagar, Gujarat, with over 15 years of experience delivering quality homes and commercial spaces.",
-    yearsOfExperience: 15,
-    happyCustomers: 1000,
-    projectsCompleted: 0,
-  });
-  const [projects, setProjects] = useState([]);
-  const [testimonials, setTestimonials] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Custom hook to animate number counts smoothly
+function useCountUp(target, duration = 1.5, trigger = true) {
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    async function fetchData() {
+    if (!trigger) return;
+    let start = 0;
+    const end = parseInt(target, 10);
+    if (isNaN(end) || end <= 0) return;
+    
+    const totalSteps = 60;
+    const stepTime = (duration * 1000) / totalSteps;
+    let step = 0;
+
+    const timer = setInterval(() => {
+      step++;
+      const progress = step / totalSteps;
+      // Ease out quad
+      const current = Math.floor(end * (progress * (2 - progress)));
+      setCount(current);
+
+      if (step >= totalSteps) {
+        setCount(end);
+        clearInterval(timer);
+      }
+    }, stepTime);
+
+    return () => clearInterval(timer);
+  }, [target, duration, trigger]);
+
+  return count;
+}
+
+export default function Home() {
+  const settings = useSiteSettings();
+  const [featuredProjects, setFeaturedProjects] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Carousel auto-rotate index
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+
+  useEffect(() => {
+    async function loadHomeContent() {
       try {
-        const [settingsRes, projectsRes, testimonialsRes] = await Promise.all([
-          api.get("/settings"),
-          api.get("/projects"),
-          api.get("/testimonials?featured=true"),
+        const [projRes, testRes, gallRes] = await Promise.all([
+          getProjects({ isFeatured: true, limit: 3 }),
+          getTestimonials({ limit: 5 }),
+          getGallery({ limit: 6 }),
         ]);
 
-        if (settingsRes.data?.success) setSettings(settingsRes.data.data);
-        if (projectsRes.data?.success) setProjects(projectsRes.data.data.filter(p => p.isFeatured).slice(0, 3));
-        if (testimonialsRes.data?.success) setTestimonials(testimonialsRes.data.data);
+        if (projRes.data?.success) {
+          // Filter to show active and featured projects
+          setFeaturedProjects(projRes.data.data.filter(p => p.isFeatured && p.isActive).slice(0, 3));
+        }
+        if (testRes.data?.success) {
+          // Filter approved testimonials
+          setTestimonials(testRes.data.data.filter(t => t.isApproved));
+        }
+        if (gallRes.data?.success) {
+          setGalleryImages(gallRes.data.data.slice(0, 6));
+        }
       } catch (err) {
-        console.error("Error loading home page data", err);
+        console.error("Failed to load Home view collections:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    loadHomeContent();
   }, []);
 
-  return (
-    <Layout>
-      {/* ─── Hero Section ────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[85vh] flex items-center bg-[#FFFBF5] overflow-hidden py-16">
-        {/* Soft background glow circles */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-amber-100/50 blur-3xl -z-10 translate-x-1/3 -translate-y-1/3" />
-        <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-orange-100/30 blur-3xl -z-10 -translate-x-1/4 translate-y-1/4" />
+  // Auto rotate testimonials
+  useEffect(() => {
+    if (testimonials.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveReviewIndex((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [testimonials]);
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+  // Framer Motion animation sets
+  const heroContainerVariants = {
+    hidden: {},
+    visible: {
+      transition: { staggerChildren: 0.15 },
+    },
+  };
+
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.7, ease: [0.215, 0.61, 0.355, 1] },
+    },
+  };
+
+  return (
+    <>
+      <Helmet>
+        <title>{settings.companyName} | Premium Real Estate & Construction Bhavnagar</title>
+        <meta
+          name="description"
+          content={`Welcome to ${settings.companyName}. ${settings.tagline}. Leading construction company in Bhavnagar, Gujarat with over ${settings.yearsOfExperience} years of experience and ${settings.happyCustomers}+ satisfied customers.`}
+        />
+      </Helmet>
+
+      {/* ─── HERO SECTION ─── */}
+      <section className="relative min-h-[80vh] flex items-center bg-[#FFFBF5] overflow-hidden py-16 text-left">
+        {/* Decorative background glows */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-amber-100/50 blur-3xl -z-10 translate-x-1/4 -translate-y-1/4" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-orange-100/30 blur-3xl -z-10 -translate-x-1/4 translate-y-1/4" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <motion.div
-            variants={containerVariants}
+            variants={heroContainerVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-col text-left"
+            className="lg:col-span-7 flex flex-col items-start"
           >
-            {/* Tagline Badge */}
             <motion.div variants={fadeInUp}>
-              <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-[#F5A623]/10 text-[#E8871E] border border-[#F5A623]/25 mb-6 uppercase tracking-wider">
-                ✦ Leading Builder in Bhavnagar
+              <span className="inline-block px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#F5A623]/10 text-[#E8871E] border border-[#F5A623]/25 mb-6 uppercase tracking-wider">
+                ✦ Shaping Bhavnagar's Skyline Since 2011
               </span>
             </motion.div>
 
-            {/* Main Title */}
             <motion.h1
               variants={fadeInUp}
               className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 font-display text-[#2E2A26] leading-[1.1]"
             >
-              Building Your Dreams With{" "}
-              <span className="text-[#F5A623] relative">
+              Constructing Spaces Built On{" "}
+              <span className="text-[#F5A623] relative inline-block">
                 Quality & Trust
-                <span className="absolute bottom-1 left-0 w-full h-2 bg-amber-200/40 -z-10 rounded" />
+                <span className="absolute bottom-1.5 left-0 w-full h-2.5 bg-amber-200/40 -z-10 rounded-full" />
               </span>
             </motion.h1>
 
-            {/* Tagline Concept */}
             <motion.p
               variants={fadeInUp}
-              className="text-lg sm:text-xl font-medium text-[#E8871E] mb-4 font-display"
+              className="text-[#E8871E] text-lg font-bold font-display tracking-wide mb-6 uppercase"
             >
               {settings.tagline}
             </motion.p>
 
-            {/* Description */}
             <motion.p
               variants={fadeInUp}
-              className="text-base text-[#6B625A] mb-8 max-w-lg leading-relaxed"
+              className="text-sm sm:text-base text-[#6B625A] mb-8 leading-relaxed max-w-xl"
             >
               {settings.aboutUsShort}
             </motion.p>
 
-            {/* CTA Buttons */}
             <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
-              <Link
-                to="/projects"
-                className="btn-primary flex items-center justify-center gap-2 group px-7 py-3.5 shadow-md shadow-amber-500/10"
-              >
-                Explore Projects
-                <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+              <Link to="/projects">
+                <Button variant="primary">
+                  Explore Projects <FiArrowRight />
+                </Button>
               </Link>
-              <Link
-                to="/contact"
-                className="btn-outline flex items-center justify-center gap-2 px-7 py-3.5"
-              >
-                Contact Us
+              <Link to="/contact">
+                <Button variant="secondary">Contact Sales</Button>
               </Link>
             </motion.div>
           </motion.div>
 
-          {/* Hero Image / Illustration */}
+          {/* Right Hero Visual Illustration / Placeholder Grid */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative lg:h-[500px] flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="lg:col-span-5 relative"
           >
-            <div className="relative w-full max-w-[500px] aspect-[4/3] sm:aspect-square lg:h-full rounded-2xl overflow-hidden shadow-card border-4 border-white bg-amber-50">
-              <img
-                src="https://picsum.photos/seed/adityabuilders/800/800"
-                alt="Aditya Builders Construction"
-                className="w-full h-full object-cover brightness-95"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-              <div className="absolute bottom-6 left-6 text-white text-left">
-                <p className="text-xs uppercase tracking-wider font-semibold text-amber-300">Latest Delivery</p>
-                <h3 className="text-xl font-bold font-display">Shreeji Aaditya, Shivomnagar</h3>
+            <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-tr from-amber-50 to-orange-100/50 border border-amber-100 rounded-3xl p-4 shadow-sm flex items-center justify-center overflow-hidden">
+              <div className="grid grid-cols-2 gap-4 w-full h-full">
+                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                  <span className="text-4xl">🏗️</span>
+                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Premium Build</h4>
+                </div>
+                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center translate-y-6">
+                  <span className="text-4xl">🏢</span>
+                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Modern Layout</h4>
+                </div>
+                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center -translate-y-6">
+                  <span className="text-4xl">🏡</span>
+                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Vastu Compliant</h4>
+                </div>
+                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                  <span className="text-4xl">🔑</span>
+                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Timely Delivery</h4>
+                </div>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ─── Stats / Milestones Section ──────────────────────────────────────── */}
-      <section className="bg-white py-16 border-y border-amber-100/50">
+      {/* ─── STATISTICS STRIP ─── */}
+      <section className="bg-white border-y border-amber-100 py-12 select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            {/* Stat Item 1 */}
-            <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] mb-4">
-                <FiAward className="w-7 h-7" />
-              </div>
-              <span className="text-4xl font-extrabold font-display text-[#2E2A26]">
-                {settings.yearsOfExperience}+ Years
+          <div className="grid grid-cols-3 gap-6 text-center md:max-w-4xl md:mx-auto">
+            <div>
+              <span className="text-3xl sm:text-5xl font-extrabold text-[#E8871E] font-display block">
+                {useCountUp(settings.yearsOfExperience)}+
               </span>
-              <span className="text-sm font-semibold text-[#6B625A] uppercase tracking-wider mt-1">
-                Industry Experience
+              <span className="text-[10px] sm:text-xs font-bold text-[#6B625A] uppercase tracking-wider mt-1 block">
+                Years Experience
               </span>
             </div>
-
-            {/* Stat Item 2 */}
-            <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] mb-4">
-                <FiUsers className="w-7 h-7" />
-              </div>
-              <span className="text-4xl font-extrabold font-display text-[#2E2A26]">
-                {settings.happyCustomers}+
+            <div>
+              <span className="text-3xl sm:text-5xl font-extrabold text-[#E8871E] font-display block">
+                {useCountUp(settings.happyCustomers)}+
               </span>
-              <span className="text-sm font-semibold text-[#6B625A] uppercase tracking-wider mt-1">
+              <span className="text-[10px] sm:text-xs font-bold text-[#6B625A] uppercase tracking-wider mt-1 block">
                 Happy Customers
               </span>
             </div>
-
-            {/* Stat Item 3 */}
-            <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-[#F5A623] mb-4">
-                <FiCheckCircle className="w-7 h-7" />
-              </div>
-              <span className="text-4xl font-extrabold font-display text-[#2E2A26]">
-                {settings.projectsCompleted || 3}
+            <div>
+              <span className="text-3xl sm:text-5xl font-extrabold text-[#E8871E] font-display block">
+                {useCountUp(settings.projectsCompleted || 5)}+
               </span>
-              <span className="text-sm font-semibold text-[#6B625A] uppercase tracking-wider mt-1">
-                Signature Realized Projects
+              <span className="text-[10px] sm:text-xs font-bold text-[#6B625A] uppercase tracking-wider mt-1 block">
+                Projects Completed
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Featured Projects Section ───────────────────────────────────────── */}
-      <section className="py-24 bg-[#FFFBF5]">
+      {/* ─── FEATURED PROJECTS SECTION ─── */}
+      <section className="py-20 bg-[#FFFBF5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Portfolio Overview</span>
-            <h2 className="section-title text-[#2E2A26] mt-2">Featured Projects</h2>
-            <span className="title-underline mx-auto" />
-            <p className="text-[#6B625A]">
-              Explore our landmark residential listings in Bhavnagar, showcasing premium styling, structural excellence, and prompt schedules.
-            </p>
-          </div>
+          <SectionHeading
+            title="Our Signature Creations"
+            subtitle="Featured Landmarks"
+            align="center"
+          />
 
           {loading ? (
-            <div className="flex justify-center items-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5A623]"></div>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="text-center py-16 text-[#6B625A]">No projects available at the moment.</div>
+            <Loader size="md" />
+          ) : featuredProjects.length === 0 ? (
+            <p className="text-sm text-[#6B625A]">Check back soon for our featured projects.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {projects.map((project) => (
-                <article key={project._id} className="card group flex flex-col h-full border border-amber-100/30">
-                  {/* Project Image */}
-                  <div className="relative overflow-hidden aspect-[4/3] bg-amber-50 shrink-0">
+              {featuredProjects.map((proj) => (
+                <Card key={proj._id} className="flex flex-col h-full text-left overflow-hidden">
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-amber-50 border border-amber-100/50 mb-5 relative">
                     <img
-                      src={project.coverImage?.url || "https://placehold.co/600x450/FAC354/FFFFFF?text=Project"}
-                      alt={project.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      src={proj.coverImage?.url || "https://placehold.co/600x450/F5A623/FFFFFF?text=Aditya+Project"}
+                      alt={proj.title}
+                      className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur shadow-sm px-3.5 py-1.5 rounded-full text-xs font-bold text-[#E8871E]">
-                      {project.status}
-                    </div>
+                    <Badge status={proj.status} className="absolute top-3 left-3 shadow-sm" />
                   </div>
-
-                  {/* Project Details */}
-                  <div className="p-6 flex flex-col flex-grow text-left">
-                    <span className="text-xs font-bold text-[#E8871E] uppercase tracking-wider mb-1">
-                      {project.type} • {project.configuration}
-                    </span>
-                    <h3 className="text-xl font-bold font-display text-[#2E2A26] mb-2 group-hover:text-[#F5A623] transition-colors">
-                      {project.title}
-                    </h3>
-                    <p className="text-xs text-[#6B625A] mb-4 line-clamp-3 leading-relaxed">
-                      {project.description}
-                    </p>
-                    <div className="mt-auto pt-4 border-t border-amber-50/50 flex justify-between items-center">
-                      <div>
-                        <span className="text-[10px] text-[#6B625A] uppercase block">Starting Price</span>
-                        <span className="text-sm font-bold text-[#2E2A26]">{project.startingPrice || "Contact Us"}</span>
-                      </div>
-                      <Link
-                        to={`/projects/${project.slug}`}
-                        className="text-xs font-bold text-[#F5A623] hover:text-[#E8871E] flex items-center gap-1 transition-colors"
-                      >
-                        Details <FiArrowRight />
-                      </Link>
-                    </div>
+                  <h3 className="text-lg font-bold font-display text-[#2E2A26] mb-1">{proj.title}</h3>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#E8871E] mb-3 block">
+                    {proj.type} • {proj.configuration}
+                  </span>
+                  <p className="text-xs text-[#6B625A] leading-relaxed line-clamp-3 mb-5">
+                    {proj.description}
+                  </p>
+                  <div className="mt-auto pt-4 border-t border-amber-50 flex justify-between items-center text-xs">
+                    <span className="font-semibold text-[#6B625A]">{proj.location}</span>
+                    <Link to={`/projects/${proj.slug}`} className="font-bold text-[#E8871E] hover:underline flex items-center gap-1">
+                      Details →
+                    </Link>
                   </div>
-                </article>
+                </Card>
               ))}
             </div>
           )}
 
-          <div className="text-center mt-12">
-            <Link to="/projects" className="btn-outline">
-              View All Projects
+          <div className="mt-12 text-center">
+            <Link to="/projects">
+              <Button variant="secondary">View All Projects</Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ─── Testimonials Section ────────────────────────────────────────────── */}
-      <section className="py-24 bg-white border-t border-amber-100/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#E8871E]">Client Voices</span>
-            <h2 className="section-title text-[#2E2A26] mt-2">What Our Customers Say</h2>
-            <span className="title-underline mx-auto" />
+      {/* ─── ABOUT STORY BLOCK ─── */}
+      <section className="py-20 bg-white border-y border-amber-100/50 text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <SectionHeading
+              title="Shaping Landmarks Built on Quality & Trust"
+              subtitle="Our Journey"
+              align="left"
+            />
+            <p className="text-sm text-[#6B625A] leading-relaxed mb-6">
+              {settings.aboutUsFull}
+            </p>
+            <div className="flex flex-col gap-3.5 mb-8 text-xs text-[#6B625A]">
+              <span className="flex items-center gap-2 font-semibold">
+                <FiCheckCircle className="text-[#F5A623]" /> 100% Transparent Dealings
+              </span>
+              <span className="flex items-center gap-2 font-semibold">
+                <FiCheckCircle className="text-[#F5A623]" /> Standard Construction Material Guarantee
+              </span>
+              <span className="flex items-center gap-2 font-semibold">
+                <FiCheckCircle className="text-[#F5A623]" /> Experienced Architects & Engineers
+              </span>
+            </div>
+            <Link to="/about">
+              <Button variant="secondary">Learn More About Us</Button>
+            </Link>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F5A623]"></div>
+          <div className="relative">
+            <div className="aspect-[4/3] rounded-3xl bg-amber-50 border border-amber-100 overflow-hidden shadow-sm">
+              <img
+                src="https://placehold.co/800x600/E8871E/FFFFFF?text=Aditya+Quality+Construction"
+                alt="Aditya construction site"
+                className="w-full h-full object-cover"
+              />
             </div>
-          ) : testimonials.length === 0 ? (
-            <div className="text-center text-[#6B625A]">No testimonials featured yet.</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((t) => (
-                <div key={t._id} className="bg-[#FFFBF5] rounded-xl p-8 border border-amber-100/40 text-left shadow-sm flex flex-col justify-between">
-                  <div>
-                    {/* Stars */}
-                    <div className="flex gap-1 mb-4 text-[#F5A623]">
-                      {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                        <span key={i} className="text-lg">★</span>
-                      ))}
-                    </div>
-                    <p className="text-sm italic text-[#6B625A] leading-relaxed mb-6">
-                      "{t.message}"
-                    </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TESTIMONIALS SLIDER CAROUSEL ─── */}
+      {testimonials.length > 0 && (
+        <section className="py-20 bg-[#FFFBF5] text-center select-none overflow-hidden">
+          <div className="max-w-4xl mx-auto px-4">
+            <SectionHeading
+              title="Words From Our Homeowners"
+              subtitle="Client Reviews"
+              align="center"
+            />
+
+            <div className="relative h-64 flex flex-col items-center justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeReviewIndex}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex flex-col items-center max-w-2xl"
+                >
+                  <div className="flex items-center gap-1.5 text-amber-400 mb-4">
+                    {Array.from({ length: testimonials[activeReviewIndex].rating }).map((_, i) => (
+                      <FiStar key={i} className="fill-amber-400" />
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3 pt-4 border-t border-amber-50">
-                    <div className="w-10 h-10 rounded-full bg-amber-200 text-[#E8871E] font-bold flex items-center justify-center text-sm shadow-inner uppercase">
-                      {t.customerName.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#2E2A26] text-sm">{t.customerName}</h4>
-                      {t.projectName && (
-                        <span className="text-xs text-[#6B625A] block mt-0.5">Purchased flat in {t.projectName}</span>
-                      )}
-                    </div>
+                  <p className="text-base sm:text-lg italic text-[#6B625A] leading-relaxed mb-6">
+                    "{testimonials[activeReviewIndex].message}"
+                  </p>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#2E2A26]">
+                    — {testimonials[activeReviewIndex].customerName}
+                    {testimonials[activeReviewIndex].projectName && (
+                      <span className="text-[#E8871E] block mt-1 font-semibold text-[10px]">
+                        Owner, {testimonials[activeReviewIndex].projectName}
+                      </span>
+                    )}
+                  </h4>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Slider navigation dots */}
+            <div className="flex justify-center gap-2 mt-6">
+              {testimonials.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveReviewIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    idx === activeReviewIndex ? "w-6 bg-[#E8871E]" : "bg-amber-200"
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── GALLERY PREVIEW GRID ─── */}
+      <section className="py-20 bg-white border-t border-amber-100/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SectionHeading
+            title="Glimpses Of Our Work"
+            subtitle="Gallery Spotlight"
+            align="center"
+          />
+
+          {loading ? (
+            <Loader size="sm" />
+          ) : galleryImages.length === 0 ? (
+            <p className="text-xs text-[#6B625A]">Images are being uploaded. Check back soon.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {galleryImages.map((img) => (
+                <div key={img._id} className="relative aspect-square rounded-2xl overflow-hidden group shadow-sm bg-amber-50 border border-amber-100">
+                  <img
+                    src={img.image?.url || "https://placehold.co/400x400/FAC354/FFFFFF?text=Aditya+Build"}
+                    alt={img.title || "Gallery Spotlight"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 text-left">
+                    <span className="text-white font-bold text-xs">{img.title || "Aditya Build"}</span>
+                    <span className="text-amber-300 text-[9px] uppercase font-bold tracking-wider mt-0.5">{img.category}</span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </section>
 
-      {/* ─── CTA Callout Section ─────────────────────────────────────────────── */}
-      <section className="bg-gradient-to-r from-[#F5A623] to-[#E8871E] py-20 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl sm:text-4xl font-extrabold font-display mb-4 text-white">
-            Ready to Find Your Dream Home?
-          </h2>
-          <p className="text-base sm:text-lg mb-8 opacity-90 max-w-2xl mx-auto">
-            Get in touch with us today. Our sales team will guide you through our ongoing and upcoming residential listings in Bhavnagar.
-          </p>
-          <div className="flex justify-center gap-4 flex-wrap">
-            <Link
-              to="/contact"
-              className="bg-white text-[#E8871E] font-bold px-8 py-3.5 rounded-xl hover:bg-[#FFFBF5] shadow-card hover:scale-105 transition-all cursor-pointer"
-            >
-              Get Free Consultation
+          <div className="mt-12 text-center">
+            <Link to="/gallery">
+              <Button variant="secondary">View Full Gallery</Button>
             </Link>
-            <a
-              href="https://wa.me/919974858500"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-green-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-green-700 hover:scale-105 transition-all flex items-center gap-2"
-            >
-              WhatsApp Us
-            </a>
           </div>
         </div>
       </section>
-    </Layout>
+
+      {/* ─── FINAL CTA BANNER ─── */}
+      <section className="py-20 bg-gradient-to-tr from-[#2E2A26] to-[#47403B] text-white text-center select-none">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col items-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold font-display mb-4">
+            Ready to Build Your Dream Home?
+          </h2>
+          <p className="text-xs sm:text-sm text-[#A3988F] leading-relaxed max-w-xl mb-8">
+            Consult with our engineering and sales experts today. We'll guide you from initial floor design drafts to final handovers.
+          </p>
+          <Link to="/contact">
+            <Button variant="primary" className="shadow-lg shadow-orange-500/5">
+              Get in Touch Today <FiArrowRight />
+            </Button>
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }

@@ -10,14 +10,14 @@ import connectDB from "./config/db.js";
 import { configureCloudinary } from "./config/cloudinary.js";
 
 // ─── Admin Route Imports ───────────────────────────────────────────────────────
-import authRoutes        from "./routes/authRoutes.js";
-import adminProjectRoutes    from "./routes/adminProjectRoutes.js";
-import adminGalleryRoutes    from "./routes/adminGalleryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import adminProjectRoutes from "./routes/adminProjectRoutes.js";
+import adminGalleryRoutes from "./routes/adminGalleryRoutes.js";
 import adminTestimonialRoutes from "./routes/adminTestimonialRoutes.js";
-import adminInquiryRoutes    from "./routes/adminInquiryRoutes.js";
-import adminTeamRoutes       from "./routes/adminTeamRoutes.js";
-import adminSettingsRoutes   from "./routes/adminSettingsRoutes.js";
-import adminUserRoutes       from "./routes/adminUserRoutes.js";
+import adminInquiryRoutes from "./routes/adminInquiryRoutes.js";
+import adminTeamRoutes from "./routes/adminTeamRoutes.js";
+import adminSettingsRoutes from "./routes/adminSettingsRoutes.js";
+import adminUserRoutes from "./routes/adminUserRoutes.js";
 
 // ─── Error Middleware (must be imported BEFORE mounting, used AFTER routes) ────
 import { notFound, globalErrorHandler } from "./middleware/errorMiddleware.js";
@@ -97,9 +97,9 @@ app.get("/api/health", (_req, res) => {
 //   - The CLIENT-SIDE admin panel URL (e.g. /secure-panel-x9k2) is a separate
 //     concern: it must remain unlinked from all public nav/footer/sitemaps.
 //     That URL is configured via VITE_ADMIN_SLUG in the client .env (Phase 1/6).
-app.use("/api/admin/auth",         authRoutes);
+app.use("/api/admin/auth", authRoutes);
 
-import adminUploadRoutes     from "./routes/adminUploadRoutes.js";
+import adminUploadRoutes from "./routes/adminUploadRoutes.js";
 
 // ── Public API Route Imports ──────────────────────────────────────────────────
 import publicProjectRoutes from "./routes/publicProjectRoutes.js";
@@ -110,22 +110,22 @@ import publicSettingsRoutes from "./routes/publicSettingsRoutes.js";
 import publicContactRoutes from "./routes/publicContactRoutes.js";
 
 // ── Admin Resource APIs (all protected by protect middleware in each router) ───
-app.use("/api/admin/projects",     adminProjectRoutes);
-app.use("/api/admin/gallery",      adminGalleryRoutes);
+app.use("/api/admin/projects", adminProjectRoutes);
+app.use("/api/admin/gallery", adminGalleryRoutes);
 app.use("/api/admin/testimonials", adminTestimonialRoutes);
-app.use("/api/admin/inquiries",    adminInquiryRoutes);
-app.use("/api/admin/team",         adminTeamRoutes);
-app.use("/api/admin/settings",     adminSettingsRoutes);
-app.use("/api/admin/admins",       adminUserRoutes);   // superadmin only
-app.use("/api/admin/upload",       adminUploadRoutes); // image upload handler
+app.use("/api/admin/inquiries", adminInquiryRoutes);
+app.use("/api/admin/team", adminTeamRoutes);
+app.use("/api/admin/settings", adminSettingsRoutes);
+app.use("/api/admin/admins", adminUserRoutes);   // superadmin only
+app.use("/api/admin/upload", adminUploadRoutes); // image upload handler
 
 // ── Public API routes (Phase 4) ───────────────────────────────────────────────
-app.use("/api/projects",     publicProjectRoutes);
-app.use("/api/gallery",      publicGalleryRoutes);
+app.use("/api/projects", publicProjectRoutes);
+app.use("/api/gallery", publicGalleryRoutes);
 app.use("/api/testimonials", publicTestimonialRoutes);
-app.use("/api/team",         publicTeamRoutes);
-app.use("/api/settings",     publicSettingsRoutes);
-app.use("/api/contact",      publicContactRoutes);
+app.use("/api/team", publicTeamRoutes);
+app.use("/api/settings", publicSettingsRoutes);
+app.use("/api/contact", publicContactRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ERROR HANDLING — Must be mounted LAST, after all routes
