@@ -10,6 +10,7 @@ import Card from "../components/ui/Card.jsx";
 import Loader from "../components/ui/Loader.jsx";
 import SectionHeading from "../components/ui/SectionHeading.jsx";
 import Badge from "../components/ui/Badge.jsx";
+import heroBuildingImg from "../assets/hero-building.png";
 
 // Custom hook to animate number counts smoothly
 function useCountUp(target, duration = 1.5, trigger = true) {
@@ -120,12 +121,20 @@ export default function Home() {
       </Helmet>
 
       {/* ─── HERO SECTION ─── */}
-      <section className="relative min-h-[80vh] flex items-center bg-[#FFFBF5] overflow-hidden py-16 text-left">
-        {/* Decorative background glows */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-amber-100/50 blur-3xl -z-10 translate-x-1/4 -translate-y-1/4" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-orange-100/30 blur-3xl -z-10 -translate-x-1/4 translate-y-1/4" />
+      <section className="relative min-h-[85vh] sm:min-h-screen flex items-center overflow-hidden py-20 text-left bg-[#2E2A26]">
+        {/* ⚠️ TEMPORARY PLACEHOLDER: Replace with actual completed project photo from admin panel / Cloudinary upload when available */}
+        <img
+          src={heroBuildingImg}
+          alt="Aditya Builders premium residential building exterior"
+          className="absolute inset-0 w-full h-full object-cover object-center sm:object-right z-0 select-none pointer-events-none"
+          loading="eager"
+        />
+        
+        {/* Dark warm gradient overlay to maximize text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#2E2A26] via-[#2E2A26]/80 to-transparent z-10" />
+        <div className="absolute inset-0 bg-[#F5A623]/10 mix-blend-overlay z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-20">
           <motion.div
             variants={heroContainerVariants}
             initial="hidden"
@@ -133,32 +142,32 @@ export default function Home() {
             className="lg:col-span-7 flex flex-col items-start"
           >
             <motion.div variants={fadeInUp}>
-              <span className="inline-block px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#F5A623]/10 text-[#E8871E] border border-[#F5A623]/25 mb-6 uppercase tracking-wider">
+              <span className="inline-block px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#F5A623]/20 text-[#F5A623] border border-[#F5A623]/35 mb-6 uppercase tracking-wider">
                 ✦ Shaping Bhavnagar's Skyline Since 2011
               </span>
             </motion.div>
 
             <motion.h1
               variants={fadeInUp}
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 font-display text-[#2E2A26] leading-[1.1]"
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 font-display text-white leading-[1.1]"
             >
               Constructing Spaces Built On{" "}
               <span className="text-[#F5A623] relative inline-block">
                 Quality & Trust
-                <span className="absolute bottom-1.5 left-0 w-full h-2.5 bg-amber-200/40 -z-10 rounded-full" />
+                <span className="absolute bottom-1.5 left-0 w-full h-2.5 bg-[#F5A623]/25 -z-10 rounded-full" />
               </span>
             </motion.h1>
 
             <motion.p
               variants={fadeInUp}
-              className="text-[#E8871E] text-lg font-bold font-display tracking-wide mb-6 uppercase"
+              className="text-amber-400 text-lg font-bold font-display tracking-wide mb-6 uppercase"
             >
               {settings.tagline}
             </motion.p>
 
             <motion.p
               variants={fadeInUp}
-              className="text-sm sm:text-base text-[#6B625A] mb-8 leading-relaxed max-w-xl"
+              className="text-xs sm:text-sm text-gray-200 mb-8 leading-relaxed max-w-xl"
             >
               {settings.aboutUsShort}
             </motion.p>
@@ -175,30 +184,30 @@ export default function Home() {
             </motion.div>
           </motion.div>
 
-          {/* Right Hero Visual Illustration / Placeholder Grid */}
+          {/* Right Hero Visual Illustration / Glassmorphism Placeholder Grid */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="lg:col-span-5 relative"
+            className="lg:col-span-5 relative hidden lg:block"
           >
-            <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-tr from-amber-50 to-orange-100/50 border border-amber-100 rounded-3xl p-4 shadow-sm flex items-center justify-center overflow-hidden">
+            <div className="aspect-[4/3] sm:aspect-square bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center justify-center overflow-hidden">
               <div className="grid grid-cols-2 gap-4 w-full h-full">
-                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white">
                   <span className="text-4xl">🏗️</span>
-                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Premium Build</h4>
+                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Premium Build</h4>
                 </div>
-                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center translate-y-6">
+                <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white translate-y-6">
                   <span className="text-4xl">🏢</span>
-                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Modern Layout</h4>
+                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Modern Layout</h4>
                 </div>
-                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center -translate-y-6">
+                <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white -translate-y-6">
                   <span className="text-4xl">🏡</span>
-                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Vastu Compliant</h4>
+                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Vastu Compliant</h4>
                 </div>
-                <div className="bg-[#FFFBF5] border border-amber-100 rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-[#2E2A26]/80 border border-white/5 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-white">
                   <span className="text-4xl">🔑</span>
-                  <h4 className="font-extrabold text-[#2E2A26] text-xs uppercase tracking-wider mt-3">Timely Delivery</h4>
+                  <h4 className="font-extrabold text-amber-300 text-[10px] uppercase tracking-wider mt-3">Timely Delivery</h4>
                 </div>
               </div>
             </div>
