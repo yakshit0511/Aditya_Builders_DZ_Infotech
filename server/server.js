@@ -99,8 +99,13 @@ app.get("/api/health", (_req, res) => {
 //     That URL is configured via VITE_ADMIN_SLUG in the client .env (Phase 1/6).
 app.use("/api/admin/auth",         authRoutes);
 
-// ── Public API Route Import ───────────────────────────────────────────────────
-import publicRoutes from "./routes/publicRoutes.js";
+// ── Public API Route Imports ──────────────────────────────────────────────────
+import publicProjectRoutes from "./routes/publicProjectRoutes.js";
+import publicGalleryRoutes from "./routes/publicGalleryRoutes.js";
+import publicTestimonialRoutes from "./routes/publicTestimonialRoutes.js";
+import publicTeamRoutes from "./routes/publicTeamRoutes.js";
+import publicSettingsRoutes from "./routes/publicSettingsRoutes.js";
+import publicContactRoutes from "./routes/publicContactRoutes.js";
 
 // ── Admin Resource APIs (all protected by protect middleware in each router) ───
 app.use("/api/admin/projects",     adminProjectRoutes);
@@ -112,7 +117,12 @@ app.use("/api/admin/settings",     adminSettingsRoutes);
 app.use("/api/admin/admins",       adminUserRoutes);   // superadmin only
 
 // ── Public API routes (Phase 4) ───────────────────────────────────────────────
-app.use("/api", publicRoutes);
+app.use("/api/projects",     publicProjectRoutes);
+app.use("/api/gallery",      publicGalleryRoutes);
+app.use("/api/testimonials", publicTestimonialRoutes);
+app.use("/api/team",         publicTeamRoutes);
+app.use("/api/settings",     publicSettingsRoutes);
+app.use("/api/contact",      publicContactRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ERROR HANDLING — Must be mounted LAST, after all routes

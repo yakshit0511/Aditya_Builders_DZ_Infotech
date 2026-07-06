@@ -247,6 +247,9 @@ const siteSettingsData = {
   phoneNumbers:  ["+91 99748 58500"],
   instagramUrl:  "https://instagram.com/adityabuilders_",
   whatsappNumber: "919974858500",
+  mapLatitude:   21.75979,
+  mapLongitude:  72.12433,
+  mapEmbedUrl:   null, // Leave blank so server-side auto-generation is tested
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

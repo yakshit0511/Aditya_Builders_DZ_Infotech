@@ -110,9 +110,22 @@ const siteSettingsSchema = new Schema(
       type: String,
     },
 
+    /** Latitude coordinates for the company office */
+    mapLatitude: {
+      type: Number,
+      default: null,
+    },
+
+    /** Longitude coordinates for the company office */
+    mapLongitude: {
+      type: Number,
+      default: null,
+    },
+
     /**
      * Google Maps embed URL for the iframe on the Contact page.
      * Obtain from Google Maps → Share → Embed a map → copy the src URL.
+     * If not manually set, will be computed server-side from mapLatitude/mapLongitude.
      */
     mapEmbedUrl: {
       type: String,
