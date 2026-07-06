@@ -102,20 +102,49 @@ export default function Gallery() {
       <section className="py-16 bg-[#FFFBF5] text-left">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* Category Tabs list */}
-          <div className="flex flex-wrap gap-2 justify-center mb-12 border-b border-amber-100/50 pb-8 select-none">
+          {/* Category Filter Tabs */}
+          <div className="flex flex-wrap gap-2.5 justify-center mb-12 pb-8 border-b border-amber-100/60 select-none">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => {
                   setCategoryFilter(cat);
-                  setDisplayCount(12); // Reset count on filter change
+                  setDisplayCount(12);
                 }}
-                className={`px-4.5 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                  categoryFilter === cat
-                    ? "bg-[#E8871E] text-white border-transparent shadow-sm"
-                    : "bg-white text-[#6B625A] border-amber-100 hover:bg-amber-50/50"
-                }`}
+                className="relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]"
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: "999px",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  letterSpacing: "0.04em",
+                  border: categoryFilter === cat
+                    ? "1.5px solid transparent"
+                    : "1.5px solid rgba(245,166,35,0.3)",
+                  background: categoryFilter === cat
+                    ? "linear-gradient(135deg,#F5A623,#E8871E)"
+                    : "rgba(255,255,255,0.85)",
+                  color: categoryFilter === cat ? "#ffffff" : "#6B625A",
+                  boxShadow: categoryFilter === cat
+                    ? "0 4px 14px rgba(232,135,30,0.30)"
+                    : "0 1px 4px rgba(0,0,0,0.06)",
+                  transition: "all 0.2s ease",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  if (categoryFilter !== cat) {
+                    e.currentTarget.style.background = "rgba(245,166,35,0.1)";
+                    e.currentTarget.style.borderColor = "rgba(245,166,35,0.5)";
+                    e.currentTarget.style.color = "#E8871E";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (categoryFilter !== cat) {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.85)";
+                    e.currentTarget.style.borderColor = "rgba(245,166,35,0.3)";
+                    e.currentTarget.style.color = "#6B625A";
+                  }
+                }}
               >
                 {cat}
               </button>
