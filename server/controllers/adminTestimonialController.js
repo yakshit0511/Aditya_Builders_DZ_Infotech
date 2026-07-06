@@ -1,6 +1,7 @@
 import { body, param, validationResult } from "express-validator";
 import Testimonial from "../models/Testimonial.js";
 import catchAsync from "../utils/catchAsync.js";
+import { cloudinary } from "../config/cloudinary.js";
 
 const validate = (req, res) => {
   const errors = validationResult(req);
@@ -56,11 +57,29 @@ export const getTestimonial = [
 export const createTestimonial = [
   body("customerName").trim().notEmpty().withMessage("Customer name is required"),
   body("message").trim().notEmpty().withMessage("Message is required"),
-  body("rating").optional().isInt({ min: 1, max: 5 }).withMessage("Rating must be 1–5"),
-  body("relatedProject").optional().isMongoId().withMessage("Invalid project ID"),
+  body("relatedProject").optional().custom((val) => {
+    if (val === "" || val === null || val === "null" || val === undefined) return true;
+    if (/^[0-9a-fA-F]{24}$/.test(val)) return true;
+    throw new Error("Invalid project ID format");
+  }),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const t = await Testimonial.create(req.body);
+
+    const payload = { ...req.body };
+    if (payload.rating) payload.rating = Number(payload.rating);
+    if (payload.isApproved) payload.isApproved = payload.isApproved === "true" || payload.isApproved === true;
+    if (payload.isFeatured) payload.isFeatured = payload.isFeatured === "true" || payload.isFeatured === true;
+
+    if (payload.relatedProject === "" || payload.relatedProject === "null" || payload.relatedProject === "undefined") {
+      payload.relatedProject = null;
+    }
+
+    // Attach customerPhoto if uploaded
+    if (req.file) {
+      payload.customerPhoto = { url: req.file.path, publicId: req.file.filename };
+    }
+
+    const t = await Testimonial.create(payload);
     res.status(201).json({ success: true, data: t });
   }),
 ];
@@ -70,29 +89,70 @@ export const createTestimonial = [
 // ─────────────────────────────────────────────────────────────────────────────
 export const updateTestimonial = [
   mongoId(),
-  body("rating").optional().isInt({ min: 1, max: 5 }).withMessage("Rating must be 1–5"),
-  body("relatedProject").optional().isMongoId().withMessage("Invalid project ID"),
+  body("relatedProject").optional().custom((val) => {
+    if (val === "" || val === null || val === "null" || val === undefined) return true;
+    if (/^[0-9a-fA-F]{24}$/.test(val)) return true;
+    throw new Error("Invalid project ID format");
+  }),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const t = await Testimonial.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!t) return res.status(404).json({ success: false, message: "Testimonial not found" });
-    res.status(200).json({ success: true, data: t });
+
+    const updates = { ...req.body };
+    const testimonial = await Testimonial.findById(req.params.id);
+    if (!testimonial) return res.status(404).json({ success: false, message: "Testimonial not found" });
+
+    if (updates.rating) updates.rating = Number(updates.rating);
+    if (updates.isApproved !== undefined) {
+      updates.isApproved = updates.isApproved === "true" || updates.isApproved === true;
+    }
+    if (updates.isFeatured !== undefined) {
+      updates.isFeatured = updates.isFeatured === "true" || updates.isFeatured === true;
+    }
+
+    if (updates.relatedProject === "" || updates.relatedProject === "null" || updates.relatedProject === "undefined") {
+      updates.relatedProject = null;
+    }
+
+    // Handle photo replacement in Cloudinary
+    if (req.file) {
+      if (testimonial.customerPhoto && testimonial.customerPhoto.publicId) {
+        try {
+          await cloudinary.uploader.destroy(testimonial.customerPhoto.publicId);
+        } catch (err) {
+          console.warn("Failed to delete old testimonial customer photo from Cloudinary:", err.message);
+        }
+      }
+      updates.customerPhoto = { url: req.file.path, publicId: req.file.filename };
+    }
+
+    Object.assign(testimonial, updates);
+    await testimonial.save();
+
+    res.status(200).json({ success: true, data: testimonial });
   }),
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DELETE /api/admin/testimonials/:id  — hard delete (no media attached)
+// DELETE /api/admin/testimonials/:id  — hard delete + media cleanup
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteTestimonial = [
   mongoId(),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const t = await Testimonial.findByIdAndDelete(req.params.id);
+    const t = await Testimonial.findById(req.params.id);
     if (!t) return res.status(404).json({ success: false, message: "Testimonial not found" });
-    res.status(200).json({ success: true, message: "Testimonial deleted" });
+
+    // Clean up testimonial photo in Cloudinary
+    if (t.customerPhoto && t.customerPhoto.publicId) {
+      try {
+        await cloudinary.uploader.destroy(t.customerPhoto.publicId);
+      } catch (err) {
+        console.warn("Failed to delete testimonial customer photo from Cloudinary on deletion:", err.message);
+      }
+    }
+
+    await t.deleteOne();
+    res.status(200).json({ success: true, message: "Testimonial deleted and Cloudinary media cleared" });
   }),
 ];
 
@@ -103,12 +163,13 @@ export const approveTestimonial = [
   mongoId(),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const t = await Testimonial.findByIdAndUpdate(
-      req.params.id,
-      { isApproved: true },
-      { new: true }
-    );
+    const t = await Testimonial.findById(req.params.id);
     if (!t) return res.status(404).json({ success: false, message: "Testimonial not found" });
-    res.status(200).json({ success: true, message: "Testimonial approved", data: t });
+
+    // Toggle approval state
+    t.isApproved = !t.isApproved;
+    await t.save();
+
+    res.status(200).json({ success: true, message: `Testimonial approval set to ${t.isApproved}`, data: t });
   }),
 ];

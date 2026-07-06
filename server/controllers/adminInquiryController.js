@@ -1,6 +1,7 @@
 import { body, param, validationResult } from "express-validator";
 import ContactInquiry from "../models/ContactInquiry.js";
 import catchAsync from "../utils/catchAsync.js";
+import { cloudinary } from "../config/cloudinary.js";
 
 const validate = (req, res) => {
   const errors = validationResult(req);
@@ -20,8 +21,6 @@ const mongoId = (field = "id") =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/inquiries  — supports ?status= filter, sorted newest first
-// NOTE: No POST route — inquiries are created ONLY via the public contact
-// form (Phase 4). Admin can only read and manage them here.
 // ─────────────────────────────────────────────────────────────────────────────
 export const getInquiries = catchAsync(async (req, res) => {
   const { status, page = 1, limit = 20 } = req.query;
@@ -88,14 +87,30 @@ export const updateInquiryStatus = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DELETE /api/admin/inquiries/:id  — hard delete (form submissions, no media)
+// DELETE /api/admin/inquiries/:id  — hard delete + Cloudinary attachments cleanup
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteInquiry = [
   mongoId(),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const inquiry = await ContactInquiry.findByIdAndDelete(req.params.id);
+    
+    const inquiry = await ContactInquiry.findById(req.params.id);
     if (!inquiry) return res.status(404).json({ success: false, message: "Inquiry not found" });
-    res.status(200).json({ success: true, message: "Inquiry deleted" });
+
+    // Clean up photo attachments from Cloudinary on delete
+    if (inquiry.attachments && inquiry.attachments.length > 0) {
+      for (const att of inquiry.attachments) {
+        if (att.publicId) {
+          try {
+            await cloudinary.uploader.destroy(att.publicId);
+          } catch (err) {
+            console.warn(`Failed to delete inquiry attachment ${att.publicId} from Cloudinary:`, err.message);
+          }
+        }
+      }
+    }
+
+    await inquiry.deleteOne();
+    res.status(200).json({ success: true, message: "Inquiry deleted and Cloudinary attachments cleared" });
   }),
 ];

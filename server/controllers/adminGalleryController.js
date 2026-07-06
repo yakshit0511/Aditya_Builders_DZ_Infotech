@@ -1,6 +1,7 @@
 import { body, param, validationResult } from "express-validator";
 import GalleryImage from "../models/GalleryImage.js";
 import catchAsync from "../utils/catchAsync.js";
+import { cloudinary } from "../config/cloudinary.js";
 
 const validate = (req, res) => {
   const errors = validationResult(req);
@@ -63,13 +64,28 @@ export const getGalleryImage = [
 // POST /api/admin/gallery
 // ─────────────────────────────────────────────────────────────────────────────
 export const createGalleryImage = [
-  body("image.url").notEmpty().withMessage("Image URL is required"),
-  body("image.publicId").notEmpty().withMessage("Image publicId is required"),
   body("category").optional().isIn(CATEGORIES).withMessage("Invalid category"),
-  body("relatedProject").optional().isMongoId().withMessage("Invalid project ID"),
+  body("relatedProject").optional().custom((val) => {
+    if (val === "" || val === null || val === "null" || val === undefined) return true;
+    if (/^[0-9a-fA-F]{24}$/.test(val)) return true;
+    throw new Error("Invalid project ID format");
+  }),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const image = await GalleryImage.create(req.body);
+
+    const payload = { ...req.body };
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Image file is required" });
+    }
+
+    payload.image = { url: req.file.path, publicId: req.file.filename };
+    
+    if (payload.relatedProject === "" || payload.relatedProject === "null" || payload.relatedProject === "undefined") {
+      payload.relatedProject = null;
+    }
+
+    const image = await GalleryImage.create(payload);
     res.status(201).json({ success: true, data: image });
   }),
 ];
@@ -80,32 +96,64 @@ export const createGalleryImage = [
 export const updateGalleryImage = [
   mongoId(),
   body("category").optional().isIn(CATEGORIES).withMessage("Invalid category"),
-  body("relatedProject").optional().isMongoId().withMessage("Invalid project ID"),
+  body("relatedProject").optional().custom((val) => {
+    if (val === "" || val === null || val === "null" || val === undefined) return true;
+    if (/^[0-9a-fA-F]{24}$/.test(val)) return true;
+    throw new Error("Invalid project ID format");
+  }),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const image = await GalleryImage.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+
+    const updates = { ...req.body };
+    const image = await GalleryImage.findById(req.params.id);
     if (!image) return res.status(404).json({ success: false, message: "Image not found" });
+
+    if (updates.relatedProject === "" || updates.relatedProject === "null" || updates.relatedProject === "undefined") {
+      updates.relatedProject = null;
+    }
+
+    // Replace image file in Cloudinary if uploaded
+    if (req.file) {
+      if (image.image && image.image.publicId) {
+        try {
+          await cloudinary.uploader.destroy(image.image.publicId);
+        } catch (err) {
+          console.warn("Failed to delete old gallery image from Cloudinary:", err.message);
+        }
+      }
+      updates.image = { url: req.file.path, publicId: req.file.filename };
+    }
+
+    Object.assign(image, updates);
+    await image.save();
+
     res.status(200).json({ success: true, data: image });
   }),
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DELETE /api/admin/gallery/:id  — soft delete
-// NOTE: Hard deletion + Cloudinary cleanup deferred to Phase 7
+// DELETE /api/admin/gallery/:id  — soft delete + media cleanup
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteGalleryImage = [
   mongoId(),
   catchAsync(async (req, res) => {
     if (!validate(req, res)) return;
-    const image = await GalleryImage.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
+    const image = await GalleryImage.findById(req.params.id);
     if (!image) return res.status(404).json({ success: false, message: "Image not found" });
-    res.status(200).json({ success: true, message: "Image deactivated", data: image });
+
+    // Clean up photo in Cloudinary
+    if (image.image && image.image.publicId) {
+      try {
+        await cloudinary.uploader.destroy(image.image.publicId);
+      } catch (err) {
+        console.warn("Failed to delete gallery image from Cloudinary on deactivation:", err.message);
+      }
+    }
+
+    image.isActive = false;
+    image.image = { url: null, publicId: null };
+    await image.save();
+
+    res.status(200).json({ success: true, message: "Image deactivated and Cloudinary media cleared", data: image });
   }),
 ];

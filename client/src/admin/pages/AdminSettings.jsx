@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../hooks/api.js";
-import ImageUploadStub from "../components/ImageUploadStub.jsx";
+import ImageUpload from "../components/ImageUpload.jsx";
 import toast from "react-hot-toast";
 import { FiSave, FiInfo, FiMapPin, FiLayers, FiPhone, FiMail, FiShare2, FiHelpCircle } from "react-icons/fi";
 
@@ -11,6 +11,7 @@ import { FiSave, FiInfo, FiMapPin, FiLayers, FiPhone, FiMail, FiShare2, FiHelpCi
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
 
   // Form Fields State
   const [formData, setFormData] = useState({
@@ -58,6 +59,7 @@ export default function AdminSettings() {
           logoUrl: s.logo?.url || "",
           logoPublicId: s.logo?.publicId || "",
         });
+        setLogoFile(null);
       }
     } catch {
       toast.error("Failed to load global site settings.");
@@ -78,22 +80,36 @@ export default function AdminSettings() {
 
     setSaving(true);
 
-    const payload = {
-      ...formData,
-      yearsOfExperience: Number(formData.yearsOfExperience),
-      happyCustomers: Number(formData.happyCustomers),
-      projectsCompleted: Number(formData.projectsCompleted),
-      mapLatitude: formData.mapLatitude !== "" ? Number(formData.mapLatitude) : null,
-      mapLongitude: formData.mapLongitude !== "" ? Number(formData.mapLongitude) : null,
-      phoneNumbers: formData.phoneNumbers ? formData.phoneNumbers.split(",").map((i) => i.trim()).filter(Boolean) : [],
-      logo: formData.logoUrl ? { url: formData.logoUrl, publicId: formData.logoPublicId } : undefined,
-    };
+    const fd = new FormData();
+    fd.append("companyName", formData.companyName);
+    fd.append("tagline", formData.tagline);
+    fd.append("aboutUsShort", formData.aboutUsShort);
+    fd.append("aboutUsFull", formData.aboutUsFull);
+    fd.append("yearsOfExperience", formData.yearsOfExperience);
+    fd.append("happyCustomers", formData.happyCustomers);
+    fd.append("projectsCompleted", formData.projectsCompleted);
+    fd.append("address", formData.address);
+    fd.append("email", formData.email);
+    fd.append("instagramUrl", formData.instagramUrl);
+    fd.append("facebookUrl", formData.facebookUrl);
+    fd.append("whatsappNumber", formData.whatsappNumber);
+    fd.append("mapLatitude", formData.mapLatitude);
+    fd.append("mapLongitude", formData.mapLongitude);
+
+    const numbersArray = formData.phoneNumbers ? formData.phoneNumbers.split(",").map((i) => i.trim()).filter(Boolean) : [];
+    fd.append("phoneNumbers", JSON.stringify(numbersArray));
+
+    if (logoFile) {
+      fd.append("logo", logoFile);
+    } else {
+      fd.append("logo", JSON.stringify({ url: formData.logoUrl, publicId: formData.logoPublicId }));
+    }
 
     try {
-      const { data } = await api.patch("/admin/settings", payload);
+      const { data } = await api.patch("/admin/settings", fd);
       if (data.success) {
         toast.success("Global settings saved successfully");
-        // Reload settings to ensure fresh details
+        setLogoFile(null);
         loadSettingsData();
       }
     } catch {
@@ -209,10 +225,13 @@ export default function AdminSettings() {
 
             {/* Logo upload widget */}
             <div className="bg-white border border-amber-100 rounded-2xl p-6 shadow-sm">
-              <ImageUploadStub
+              <ImageUpload
                 label="Site Corporate Logo Upload"
                 value={formData.logoUrl}
-                onChange={(url, publicId) => setFormData({ ...formData, logoUrl: url, logoPublicId: publicId })}
+                onChange={(file, previewUrl) => {
+                  setLogoFile(file);
+                  setFormData((prev) => ({ ...prev, logoUrl: previewUrl }));
+                }}
               />
             </div>
           </div>

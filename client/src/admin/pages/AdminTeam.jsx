@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../hooks/api.js";
-import ImageUploadStub from "../components/ImageUploadStub.jsx";
+import ImageUpload from "../components/ImageUpload.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import toast from "react-hot-toast";
 import { FiPlus, FiTrash2, FiEdit2, FiSave, FiUsers } from "react-icons/fi";
@@ -22,6 +22,7 @@ export default function AdminTeam() {
   const [displayOrder, setDisplayOrder] = useState(0);
   const [photo, setPhoto] = useState({ url: "", publicId: "" });
   const [isActive, setIsActive] = useState(true);
+  const [photoFile, setPhotoFile] = useState(null);
 
   // Deletion State
   const [selectedId, setSelectedId] = useState(null);
@@ -52,6 +53,7 @@ export default function AdminTeam() {
     setDisplayOrder(0);
     setPhoto({ url: "", publicId: "" });
     setIsActive(true);
+    setPhotoFile(null);
     setFormOpen(true);
   };
 
@@ -63,6 +65,7 @@ export default function AdminTeam() {
     setDisplayOrder(m.displayOrder || 0);
     setPhoto(m.photo || { url: "", publicId: "" });
     setIsActive(m.isActive !== undefined ? m.isActive : true);
+    setPhotoFile(null);
     setFormOpen(true);
   };
 
@@ -71,21 +74,25 @@ export default function AdminTeam() {
     if (!name.trim()) return toast.error("Full name is required");
     if (!designation.trim()) return toast.error("Designation is required");
 
-    const payload = {
-      name,
-      designation,
-      bio,
-      displayOrder,
-      photo,
-      isActive,
-    };
+    const fd = new FormData();
+    fd.append("name", name);
+    fd.append("designation", designation);
+    fd.append("bio", bio);
+    fd.append("displayOrder", displayOrder);
+    fd.append("isActive", isActive);
+
+    if (photoFile) {
+      fd.append("photo", photoFile);
+    } else {
+      fd.append("photo", JSON.stringify(photo));
+    }
 
     try {
       if (editingMember) {
-        await api.patch(`/admin/team/${editingMember._id}`, payload);
+        await api.patch(`/admin/team/${editingMember._id}`, fd);
         toast.success("Team member details updated");
       } else {
-        await api.post("/admin/team", payload);
+        await api.post("/admin/team", fd);
         toast.success("Team member added successfully");
       }
       setFormOpen(false);
@@ -219,10 +226,13 @@ export default function AdminTeam() {
 
           {/* Photo upload */}
           <div>
-            <ImageUploadStub
+            <ImageUpload
               label="Staff Portrait Image (Upload)"
               value={photo?.url}
-              onChange={(url, publicId) => setPhoto({ url, publicId })}
+              onChange={(file, previewUrl) => {
+                setPhotoFile(file);
+                setPhoto((prev) => ({ ...prev, url: previewUrl }));
+              }}
             />
           </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../hooks/api.js";
-import ImageUploadStub from "../components/ImageUploadStub.jsx";
+import ImageUpload from "../components/ImageUpload.jsx";
 import toast from "react-hot-toast";
 import { FiSave, FiArrowLeft, FiPlus, FiTrash2, FiTag } from "react-icons/fi";
 
@@ -19,6 +19,7 @@ export default function ProjectForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [coverImageFile, setCoverImageFile] = useState(null);
 
   // Form Fields State
   const [formData, setFormData] = useState({
@@ -156,18 +157,49 @@ export default function ProjectForm() {
 
     setSaving(true);
 
-    const payload = {
-      ...formData,
-      contactNumbers: contactNumbers.map((c) => c.trim()).filter(Boolean),
-      amenities: amenities.map((a) => a.trim()).filter(Boolean),
-    };
+    const fd = new FormData();
+    fd.append("title", formData.title);
+    fd.append("slug", formData.slug);
+    fd.append("type", formData.type);
+    fd.append("configuration", formData.configuration);
+    fd.append("status", formData.status);
+    fd.append("location", formData.location);
+    fd.append("description", formData.description);
+    fd.append("startingPrice", formData.startingPrice);
+    fd.append("possessionDate", formData.possessionDate);
+    fd.append("reraNumber", formData.reraNumber);
+    fd.append("isFeatured", formData.isFeatured);
+    fd.append("isActive", formData.isActive);
+    fd.append("displayOrder", formData.displayOrder);
+
+    // Append array lists as stringified JSON strings
+    fd.append("contactNumbers", JSON.stringify(contactNumbers.map((c) => c.trim()).filter(Boolean)));
+    fd.append("amenities", JSON.stringify(amenities.map((a) => a.trim()).filter(Boolean)));
+
+    // Cover image file (new upload or existing cover metadata)
+    if (coverImageFile) {
+      fd.append("coverImage", coverImageFile);
+    } else {
+      fd.append("coverImage", JSON.stringify(formData.coverImage));
+    }
+
+    // Split gallery files out into uploads and remaining metadata list
+    const existingGallery = [];
+    formData.gallery.forEach((item) => {
+      if (item.file) {
+        fd.append("gallery", item.file);
+      } else {
+        existingGallery.push({ url: item.url, publicId: item.publicId });
+      }
+    });
+    fd.append("existingGallery", JSON.stringify(existingGallery));
 
     try {
       if (isEditMode) {
-        await api.patch(`/admin/projects/${id}`, payload);
+        await api.patch(`/admin/projects/${id}`, fd);
         toast.success("Project updated successfully");
       } else {
-        await api.post("/admin/projects", payload);
+        await api.post("/admin/projects", fd);
         toast.success("Project listed successfully");
       }
       navigate(`${ADMIN_SLUG}/projects`);
@@ -336,7 +368,7 @@ export default function ProjectForm() {
             <h3 className="text-sm font-bold text-[#2E2A26] border-b border-amber-50 pb-2">
               Media & Project Gallery
             </h3>
-            <ImageUploadStub
+            <ImageUpload
               label="Select Multi-Photo Attachments (Gallery)"
               isMultiple={true}
               galleryValues={formData.gallery}
@@ -449,10 +481,13 @@ export default function ProjectForm() {
 
           {/* Cover Photo upload widget */}
           <div className="bg-white border border-amber-100 rounded-2xl p-6 shadow-sm">
-            <ImageUploadStub
+            <ImageUpload
               label="Primary Listing Cover"
               value={formData.coverImage?.url}
-              onChange={(url, publicId) => setFormData({ ...formData, coverImage: { url, publicId } })}
+              onChange={(file, previewUrl) => {
+                setCoverImageFile(file);
+                setFormData((prev) => ({ ...prev, coverImage: { url: previewUrl, publicId: prev.coverImage?.publicId || "" } }));
+              }}
             />
           </div>
 

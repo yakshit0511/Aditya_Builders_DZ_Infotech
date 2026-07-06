@@ -4,11 +4,14 @@ import {
   getSettings,
   updateSettings,
 } from "../controllers/adminSettingsController.js";
+import { uploadSiteLogo } from "../config/multerStorage.js";
 
 const router = express.Router();
 
 router.use(protect);
 
-router.route("/").get(getSettings).patch(updateSettings);
+router.route("/")
+  .get(getSettings)
+  .patch(uploadSiteLogo.single("logo"), updateSettings);
 
 export default router;

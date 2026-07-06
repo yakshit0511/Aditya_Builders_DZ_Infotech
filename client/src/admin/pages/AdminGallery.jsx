@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../hooks/api.js";
-import ImageUploadStub from "../components/ImageUploadStub.jsx";
+import ImageUpload from "../components/ImageUpload.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import toast from "react-hot-toast";
 import { FiPlus, FiTrash2, FiSearch, FiLayers, FiList, FiSave } from "react-icons/fi";
@@ -22,6 +22,7 @@ export default function AdminGallery() {
   const [imageUrl, setImageUrl] = useState("");
   const [publicId, setPublicId] = useState("");
   const [displayOrder, setDisplayOrder] = useState(0);
+  const [imageFile, setImageFile] = useState(null);
 
   // Filter Categories
   const [activeCategory, setActiveCategory] = useState("All");
@@ -58,23 +59,23 @@ export default function AdminGallery() {
     setImageUrl("");
     setPublicId("");
     setDisplayOrder(0);
+    setImageFile(null);
     setFormOpen(true);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!imageUrl) return toast.error("Image file selection is required");
+    if (!imageFile) return toast.error("Image file selection is required");
 
-    const payload = {
-      title,
-      category,
-      image: { url: imageUrl, publicId: publicId || `manual/gallery-${Date.now()}` },
-      relatedProject: relatedProject || null,
-      displayOrder,
-    };
+    const fd = new FormData();
+    fd.append("title", title);
+    fd.append("category", category);
+    fd.append("image", imageFile);
+    fd.append("relatedProject", relatedProject || "");
+    fd.append("displayOrder", displayOrder);
 
     try {
-      const { data } = await api.post("/admin/gallery", payload);
+      const { data } = await api.post("/admin/gallery", fd);
       if (data.success) {
         toast.success("Image added to gallery catalog");
         setFormOpen(false);
@@ -213,12 +214,12 @@ export default function AdminGallery() {
 
           {/* Photo File upload */}
           <div>
-            <ImageUploadStub
+            <ImageUpload
               label="Select Photo Attachment * "
               value={imageUrl}
-              onChange={(url, pId) => {
-                setImageUrl(url);
-                setPublicId(pId);
+              onChange={(file, previewUrl) => {
+                setImageFile(file);
+                setImageUrl(previewUrl);
               }}
             />
           </div>

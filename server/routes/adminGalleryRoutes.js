@@ -7,12 +7,19 @@ import {
   updateGalleryImage,
   deleteGalleryImage,
 } from "../controllers/adminGalleryController.js";
+import { uploadSiteGallery } from "../config/multerStorage.js";
 
 const router = express.Router();
 
 router.use(protect);
 
-router.route("/").get(getGalleryImages).post(createGalleryImage);
-router.route("/:id").get(getGalleryImage).patch(updateGalleryImage).delete(deleteGalleryImage);
+router.route("/")
+  .get(getGalleryImages)
+  .post(uploadSiteGallery.single("image"), createGalleryImage);
+
+router.route("/:id")
+  .get(getGalleryImage)
+  .patch(uploadSiteGallery.single("image"), updateGalleryImage)
+  .delete(deleteGalleryImage);
 
 export default router;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../hooks/api.js";
-import ImageUploadStub from "../components/ImageUploadStub.jsx";
+import ImageUpload from "../components/ImageUpload.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import toast from "react-hot-toast";
 import { FiPlus, FiTrash2, FiEdit2, FiStar, FiCheck, FiX, FiCheckCircle } from "react-icons/fi";
@@ -24,6 +24,7 @@ export default function AdminTestimonials() {
   const [isApproved, setIsApproved] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [customerPhoto, setCustomerPhoto] = useState({ url: "", publicId: "" });
+  const [photoFile, setPhotoFile] = useState(null);
 
   // Delete State
   const [selectedId, setSelectedId] = useState(null);
@@ -59,6 +60,7 @@ export default function AdminTestimonials() {
     setIsApproved(true);
     setIsFeatured(false);
     setCustomerPhoto({ url: "", publicId: "" });
+    setPhotoFile(null);
     setFormOpen(true);
   };
 
@@ -71,6 +73,7 @@ export default function AdminTestimonials() {
     setIsApproved(!!t.isApproved);
     setIsFeatured(!!t.isFeatured);
     setCustomerPhoto(t.customerPhoto || { url: "", publicId: "" });
+    setPhotoFile(null);
     setFormOpen(true);
   };
 
@@ -79,22 +82,26 @@ export default function AdminTestimonials() {
     if (!customerName.trim()) return toast.error("Customer name is required");
     if (!message.trim()) return toast.error("Review message is required");
 
-    const payload = {
-      customerName,
-      projectName,
-      rating,
-      message,
-      isApproved,
-      isFeatured,
-      customerPhoto,
-    };
+    const fd = new FormData();
+    fd.append("customerName", customerName);
+    fd.append("projectName", projectName || "");
+    fd.append("rating", rating);
+    fd.append("message", message);
+    fd.append("isApproved", isApproved);
+    fd.append("isFeatured", isFeatured);
+
+    if (photoFile) {
+      fd.append("customerPhoto", photoFile);
+    } else {
+      fd.append("customerPhoto", JSON.stringify(customerPhoto));
+    }
 
     try {
       if (editingTestimonial) {
-        await api.patch(`/admin/testimonials/${editingTestimonial._id}`, payload);
+        await api.patch(`/admin/testimonials/${editingTestimonial._id}`, fd);
         toast.success("Testimonial updated successfully");
       } else {
-        await api.post("/admin/testimonials", payload);
+        await api.post("/admin/testimonials", fd);
         toast.success("Testimonial created successfully");
       }
       setFormOpen(false);
@@ -278,10 +285,13 @@ export default function AdminTestimonials() {
 
           {/* Staff Photo */}
           <div>
-            <ImageUploadStub
+            <ImageUpload
               label="Customer Profile Image Upload (Optional)"
               value={customerPhoto?.url}
-              onChange={(url, publicId) => setCustomerPhoto({ url, publicId })}
+              onChange={(file, previewUrl) => {
+                setPhotoFile(file);
+                setCustomerPhoto((prev) => ({ ...prev, url: previewUrl }));
+              }}
             />
           </div>
 

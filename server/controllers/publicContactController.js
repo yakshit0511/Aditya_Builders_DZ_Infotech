@@ -42,7 +42,7 @@ export const inquiryValidation = [
   body("interestedProject")
     .optional()
     .custom((val) => {
-      if (val === "" || val === null) return true;
+      if (val === "" || val === null || val === "null" || val === undefined) return true;
       // Must be valid MongoDB ObjectId if provided
       if (/^[0-9a-fA-F]{24}$/.test(val)) return true;
       throw new Error("Invalid project reference format");
@@ -61,7 +61,7 @@ export const createInquiry = [
 
     // Set status workflow to 'New'
     // Source defaults to 'Project Enquiry' if project ID is provided, else 'Website Contact Form'
-    const source = interestedProject ? "Project Enquiry" : "Website Contact Form";
+    const source = (interestedProject && interestedProject !== "null") ? "Project Enquiry" : "Website Contact Form";
 
     // Map photo attachments if any exist
     const attachments = [];
@@ -80,15 +80,28 @@ export const createInquiry = [
       phone,
       subject: subject || undefined,
       message,
-      interestedProject: interestedProject || null,
+      interestedProject: (interestedProject && interestedProject !== "null") ? interestedProject : null,
       status: "New",
       source,
       attachments,
     });
 
-    // Call asynchronous stub service (logs to console for Phase 4)
-    // Runs in background or awaited. Let's await for simplicity.
-    await sendContactNotificationEmail(inquiry);
+    // Populate interestedProject so the email has access to the title details
+    if (inquiry.interestedProject) {
+      try {
+        await inquiry.populate("interestedProject", "title");
+      } catch (err) {
+        console.warn("⚠️ Failed to populate interestedProject for lead email:", err.message);
+      }
+    }
+
+    // Call asynchronous service, wrapped in a non-blocking try/catch just in case,
+    // so email errors NEVER crash the customer form success response.
+    try {
+      await sendContactNotificationEmail(inquiry);
+    } catch (err) {
+      console.error("⚠️ Failed to trigger lead notification email:", err.message);
+    }
 
     // CRITICAL SECURITY: Do NOT return internal DB fields or details back to public
     res.status(201).json({
