@@ -179,6 +179,7 @@ export default function AdminProjects() {
                 <th className="p-4">Title</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Starting Price</th>
+                <th className="p-4">SB Area</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-center">Featured</th>
                 <th className="p-4 text-center">Active</th>
@@ -224,6 +225,15 @@ export default function AdminProjects() {
                     {/* Price */}
                     <td className="p-4 text-xs font-semibold text-[#2E2A26]">
                       {p.startingPrice || "-"}
+                    </td>
+
+                    {/* SB Area */}
+                    <td className="p-4 text-xs text-[#6B625A]">
+                      {p.saleableArea?.minSqFt
+                        ? p.saleableArea.maxSqFt
+                          ? `${p.saleableArea.minSqFt}–${p.saleableArea.maxSqFt} sq.ft`
+                          : `${p.saleableArea.minSqFt} sq.ft`
+                        : <span className="text-[#B0A89E] italic">—</span>}
                     </td>
 
                     {/* Status */}

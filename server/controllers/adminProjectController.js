@@ -31,6 +31,22 @@ export const projectValidation = [
     .optional()
     .isIn(["Residential", "Commercial", "Residential + Commercial"])
     .withMessage("Invalid project type"),
+  body("saleableArea.minSqFt")
+    .optional()
+    .isNumeric()
+    .withMessage("saleableArea.minSqFt must be a number"),
+  body("saleableArea.maxSqFt")
+    .optional()
+    .isNumeric()
+    .withMessage("saleableArea.maxSqFt must be a number")
+    .custom((val, { req }) => {
+      const min = Number(req.body["saleableArea.minSqFt"] ?? req.body?.saleableArea?.minSqFt);
+      const max = Number(val);
+      if (!isNaN(min) && !isNaN(max) && max < min) {
+        throw new Error("saleableArea.maxSqFt must be >= minSqFt");
+      }
+      return true;
+    }),
 ];
 
 // ─── Slug generator ───────────────────────────────────────────────────────────
@@ -105,6 +121,10 @@ export const createProject = [
     if (payload.amenities) {
       try { payload.amenities = JSON.parse(payload.amenities); } catch { /* ignore */ }
     }
+    // Parse saleableArea from FormData JSON string
+    if (payload.saleableArea && typeof payload.saleableArea === "string") {
+      try { payload.saleableArea = JSON.parse(payload.saleableArea); } catch { /* ignore */ }
+    }
 
     // Map cover image file if uploaded
     if (req.files && req.files["coverImage"] && req.files["coverImage"][0]) {
@@ -145,6 +165,10 @@ export const updateProject = [
     }
     if (updates.amenities) {
       try { updates.amenities = JSON.parse(updates.amenities); } catch { /* ignore */ }
+    }
+    // Parse saleableArea from FormData JSON string
+    if (updates.saleableArea && typeof updates.saleableArea === "string") {
+      try { updates.saleableArea = JSON.parse(updates.saleableArea); } catch { /* ignore */ }
     }
 
     // Re-generate slug if title changed and no explicit slug given

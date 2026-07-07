@@ -655,10 +655,22 @@ export default function Home() {
                         {p.description}
                       </p>
                       
-                      <div className="mb-5 bg-[#FFFBF5] rounded-xl border border-amber-50/55 p-3 flex justify-between items-center text-xs">
+                      <div className="mb-3 bg-[#FFFBF5] rounded-xl border border-amber-50/55 p-3 flex justify-between items-center text-xs">
                         <span className="font-semibold text-[#6B625A]">Price:</span>
                         <span className="font-extrabold text-[#E8871E] font-display">{p.startingPrice || "Request Quote"}</span>
                       </div>
+
+                      {/* Saleable Area strip */}
+                      {p.saleableArea?.minSqFt && (
+                        <div className="mb-5 bg-amber-50/40 rounded-xl border border-amber-100/40 p-3 flex justify-between items-center text-xs">
+                          <span className="font-semibold text-[#6B625A]">Saleable Area:</span>
+                          <span className="font-bold text-[#2E2A26]">
+                            {p.saleableArea.maxSqFt
+                              ? `${p.saleableArea.minSqFt} – ${p.saleableArea.maxSqFt} sq.ft`
+                              : `${p.saleableArea.minSqFt} sq.ft`}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="mt-auto pt-4 border-t border-amber-50 flex justify-between items-center text-xs">
                         <span className="font-semibold text-[#6B625A]">{p.location}</span>

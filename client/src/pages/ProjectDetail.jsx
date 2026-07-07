@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMapPin, FiPhone, FiInfo, FiTag, FiKey, FiAward, FiX } from "react-icons/fi";
+import { FiMapPin, FiPhone, FiInfo, FiTag, FiKey, FiAward, FiX, FiMaximize } from "react-icons/fi";
 import { getProjectBySlug } from "../services/api.js";
 import { useSiteSettings } from "../context/SiteSettingsContext.jsx";
 import Button from "../components/ui/Button.jsx";
@@ -246,6 +246,16 @@ export default function ProjectDetail() {
                     <span className="flex items-center gap-1.5 font-medium"><FiInfo className="text-[#F5A623]" /> Configuration</span>
                     <span className="font-bold text-[#2E2A26]">{project.configuration}</span>
                   </div>
+                  {project.saleableArea?.minSqFt && (
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-1.5 font-medium"><FiMaximize className="text-[#F5A623]" /> Saleable Area</span>
+                      <span className="font-bold text-[#2E2A26]">
+                        {project.saleableArea.maxSqFt
+                          ? `${project.saleableArea.minSqFt} – ${project.saleableArea.maxSqFt} sq.ft`
+                          : `${project.saleableArea.minSqFt} sq.ft`}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5 font-medium"><FiTag className="text-[#F5A623]" /> Price Estimate</span>
                     <span className="font-bold text-[#E8871E]">{project.startingPrice || "Request Quote"}</span>

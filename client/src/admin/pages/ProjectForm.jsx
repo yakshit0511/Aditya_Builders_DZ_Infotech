@@ -38,6 +38,7 @@ export default function ProjectForm() {
     displayOrder: 0,
     coverImage: { url: "", publicId: "" },
     gallery: [],
+    saleableArea: { minSqFt: "", maxSqFt: "" },
   });
 
   // Dynamic Lists States
@@ -67,6 +68,10 @@ export default function ProjectForm() {
           displayOrder: p.displayOrder || 0,
           coverImage: p.coverImage || { url: "", publicId: "" },
           gallery: p.gallery || [],
+          saleableArea: {
+            minSqFt: p.saleableArea?.minSqFt ?? "",
+            maxSqFt: p.saleableArea?.maxSqFt ?? "",
+          },
         });
         setContactNumbers(p.contactNumbers?.length > 0 ? p.contactNumbers : [""]);
         setAmenities(p.amenities || []);
@@ -155,6 +160,15 @@ export default function ProjectForm() {
     if (!formData.location.trim()) return toast.error("Location is required");
     if (!formData.description.trim()) return toast.error("Description is required");
 
+    // Saleable area cross-field validation
+    const minSqFt = formData.saleableArea.minSqFt !== "" ? Number(formData.saleableArea.minSqFt) : null;
+    const maxSqFt = formData.saleableArea.maxSqFt !== "" ? Number(formData.saleableArea.maxSqFt) : null;
+    if (minSqFt !== null && isNaN(minSqFt)) return toast.error("Saleable Area Min must be a valid number");
+    if (maxSqFt !== null && isNaN(maxSqFt)) return toast.error("Saleable Area Max must be a valid number");
+    if (minSqFt !== null && maxSqFt !== null && maxSqFt < minSqFt) {
+      return toast.error("Saleable Area Max must be ≥ Min Sq.Ft");
+    }
+
     setSaving(true);
 
     const fd = new FormData();
@@ -175,6 +189,14 @@ export default function ProjectForm() {
     // Append array lists as stringified JSON strings
     fd.append("contactNumbers", JSON.stringify(contactNumbers.map((c) => c.trim()).filter(Boolean)));
     fd.append("amenities", JSON.stringify(amenities.map((a) => a.trim()).filter(Boolean)));
+
+    // Append saleableArea as JSON
+    if (minSqFt !== null) {
+      fd.append("saleableArea", JSON.stringify({
+        minSqFt,
+        maxSqFt: maxSqFt !== null ? maxSqFt : null,
+      }));
+    }
 
     // Cover image file (new upload or existing cover metadata)
     if (coverImageFile) {
@@ -360,6 +382,54 @@ export default function ProjectForm() {
                 placeholder="Marketing details, structural details, area measurements, and build features..."
                 className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/25 text-sm resize-none leading-relaxed"
               />
+            </div>
+          </div>
+
+          {/* Saleable Area Card */}
+          <div className="bg-white border border-amber-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+            <h3 className="text-sm font-bold text-[#2E2A26] border-b border-amber-50 pb-2">
+              Saleable Area (SB Area)
+            </h3>
+            <p className="text-[10px] text-[#6B625A]">
+              Enter the carpet / super built-up area per unit. Provide both Min &amp; Max for a range (e.g. 1336–1655 sq.ft), or only Min for a fixed size (e.g. 1060 sq.ft for Aaditya Skyline).
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
+                  Min Sq.Ft
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.saleableArea.minSqFt}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      saleableArea: { ...formData.saleableArea, minSqFt: e.target.value },
+                    })
+                  }
+                  placeholder="e.g. 1060"
+                  className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6B625A] uppercase tracking-wider mb-2">
+                  Max Sq.Ft <span className="font-normal normal-case text-[9px]">(leave blank if single fixed area)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.saleableArea.maxSqFt}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      saleableArea: { ...formData.saleableArea, maxSqFt: e.target.value },
+                    })
+                  }
+                  placeholder="e.g. 1655"
+                  className="w-full px-4 py-3 rounded-xl border border-amber-100 focus:outline-none focus:border-[#F5A623] bg-[#FFFBF5]/20 text-sm font-semibold"
+                />
+              </div>
             </div>
           </div>
 

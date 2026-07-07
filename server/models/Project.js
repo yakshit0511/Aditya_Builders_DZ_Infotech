@@ -56,6 +56,29 @@ const projectSchema = new Schema(
       trim: true,
     },
 
+    /**
+     * Saleable / Super Built-Up (SB) area of the unit.
+     * minSqFt — required lower bound (or only value for a fixed area).
+     * maxSqFt — optional upper bound; if omitted, treated as a single
+     *           fixed area (e.g. Aaditya Skyline = 1060 sq.ft exactly).
+     */
+    saleableArea: {
+      minSqFt: {
+        type: Number,
+        validate: {
+          validator: function (val) {
+            // maxSqFt must be >= minSqFt when both are present
+            if (this.saleableArea?.maxSqFt !== undefined && this.saleableArea.maxSqFt !== null) {
+              return this.saleableArea.maxSqFt >= val;
+            }
+            return true;
+          },
+          message: "saleableArea.maxSqFt must be greater than or equal to minSqFt",
+        },
+      },
+      maxSqFt: { type: Number, default: null },
+    },
+
     /** Current build status — shown as a badge on the project card */
     status: {
       type: String,
